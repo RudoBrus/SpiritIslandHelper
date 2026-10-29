@@ -70,10 +70,10 @@ choices.
 
 ## Spirit/adversary matchup tiers
 
-Pick an adversary before drawing spirits. Each selected spirit shows its
-matchup tier against that adversary; choosing an aspect uses the aspect-specific
-tier when one is listed. Changing the adversary clears the current spirit draw
-so players can make a new selection for the new matchup.
+Choosing an adversary is optional when drawing spirits. When one is selected,
+each spirit shows its matchup tier against that adversary; choosing an aspect
+uses the aspect-specific tier when one is listed. Changing the adversary updates
+the existing results without rerolling spirits.
 
 The matchup grades and special asterisks are transcribed with the author's
 permission from
@@ -83,6 +83,10 @@ games with 4 or more spirits, no outside support, no scenario, balanced boards,
 and optimal play. An asterisk is the author's marker for a matchup that may be
 harder to achieve at its listed tier. These ratings are subjective guidance,
 not a guarantee of game outcomes.
+
+The **Matchup axis** view displays the complete spirit-and-aspect table. Filter
+by adversary, search spirit or aspect names, and narrow by spirit complexity.
+On small screens, scroll horizontally to see all adversary columns.
 
 ## GitHub Pages
 

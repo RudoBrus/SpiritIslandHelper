@@ -8,6 +8,7 @@ import {
   rerollSpirit,
   randomizeSpirits,
 } from './features/selector/randomizeSpirits'
+import MatchupAxis from './features/matchups/MatchupAxis'
 import type { SpiritAspect, SpiritComplexity } from './types/spirit'
 
 const complexities: readonly SpiritComplexity[] = [
@@ -26,6 +27,7 @@ const complexityModifierLabels: Record<SpiritAspect['complexityModifier'], strin
 }
 
 function App() {
+  const [activeView, setActiveView] = useState<'picker' | 'axis'>('picker')
   const [playerCount, setPlayerCount] = useState(1)
   const [availableComplexities, setAvailableComplexities] =
     useState<readonly SpiritComplexity[]>(complexities)
@@ -46,7 +48,6 @@ function App() {
 
   function changeAdversary(adversary: Adversary | null) {
     setSelectedAdversary(adversary)
-    setResults(null)
     setError(null)
   }
 
@@ -68,7 +69,6 @@ function App() {
         ? current.filter((item) => item !== complexity)
         : [...current, complexity],
     )
-    setResults(null)
     setError(null)
   }
 
@@ -87,16 +87,10 @@ function App() {
           : [...selected, complexity]
       }),
     )
-    setResults(null)
     setError(null)
   }
 
   function generateSelection() {
-    if (!selectedAdversary) {
-      setError('Pick an adversary before selecting spirits.')
-      return
-    }
-
     const selection = randomizeSpirits(
       spirits,
       applyGlobalComplexityFilter(
@@ -186,11 +180,49 @@ function App() {
         <h1 className="text-3xl font-semibold tracking-tight text-[#f2f4ed] sm:text-4xl">
           Spirit Island Helper
         </h1>
-        <AdversarySelector onSelectionChange={changeAdversary} />
+
+        <div
+          role="group"
+          aria-label="Choose a view"
+          className="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-[#17211b]/80 p-1.5 sm:w-fit"
+        >
+          <button
+            type="button"
+            aria-pressed={activeView === 'picker'}
+            onClick={() => setActiveView('picker')}
+            className={`min-h-11 rounded-lg px-4 text-sm font-semibold transition focus-visible:outline-emerald-300 ${
+              activeView === 'picker'
+                ? 'bg-emerald-300 text-[#102016]'
+                : 'text-[#c5cec2] hover:bg-white/5'
+            }`}
+          >
+            Spirit picker
+          </button>
+          <button
+            type="button"
+            aria-pressed={activeView === 'axis'}
+            onClick={() => setActiveView('axis')}
+            className={`min-h-11 rounded-lg px-4 text-sm font-semibold transition focus-visible:outline-emerald-300 ${
+              activeView === 'axis'
+                ? 'bg-emerald-300 text-[#102016]'
+                : 'text-[#c5cec2] hover:bg-white/5'
+            }`}
+          >
+            Matchup axis
+          </button>
+        </div>
+
+        <div className={activeView === 'picker' ? '' : 'hidden'}>
+          <AdversarySelector onSelectionChange={changeAdversary} />
+        </div>
 
         <section
           aria-labelledby="setup-title"
-          className="rounded-2xl border border-white/10 bg-[#17211b]/90 p-5 shadow-2xl shadow-black/10 sm:p-7"
+          className={
+            activeView === 'picker'
+              ? 'rounded-2xl border border-white/10 bg-[#17211b]/90 p-5 shadow-2xl shadow-black/10 sm:p-7'
+              : 'hidden'
+          }
         >
           <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -296,19 +328,16 @@ function App() {
           <button
             type="button"
             onClick={generateSelection}
-            disabled={!selectedAdversary}
-            className="mt-6 min-h-12 w-full rounded-xl bg-emerald-300 px-5 py-3 text-sm font-bold text-[#102016] transition hover:bg-emerald-200 focus-visible:outline-offset-4 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            className="mt-6 min-h-12 w-full rounded-xl bg-emerald-300 px-5 py-3 text-sm font-bold text-[#102016] transition hover:bg-emerald-200 focus-visible:outline-offset-4 sm:w-auto"
           >
             Pick spirits
           </button>
-          {!selectedAdversary && (
-            <p className="mt-3 text-sm text-[#aeb9ad]">
-              Pick an adversary above to unlock spirit selection.
-            </p>
-          )}
         </section>
 
-        <div aria-live="polite" className="mt-7">
+        <div
+          aria-live="polite"
+          className={activeView === 'picker' ? 'mt-7' : 'hidden'}
+        >
           {error && (
             <p
               role="alert"
@@ -324,23 +353,27 @@ function App() {
                 <h2 id="results-title" className="text-xl font-semibold">
                   Your spirits
                 </h2>
-                <p className="text-sm text-[#aeb9ad]">
-                  Matchup tier vs. {selectedAdversary?.name}
-                </p>
+                {selectedAdversary && (
+                  <p className="text-sm text-[#aeb9ad]">
+                    Matchup tier vs. {selectedAdversary.name}
+                  </p>
+                )}
               </div>
-              <p className="mb-4 text-sm leading-6 text-[#aeb9ad]">
-                Tiers are for level 6 adversaries in 4+ spirit games without
-                outside support. An asterisk marks a matchup that may be harder
-                to achieve at its listed tier.{' '}
-                <a
-                  href="https://www.reddit.com/r/spiritisland/comments/1bqer7k/reds_matchup_axis_5_star_system/"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-emerald-200 underline decoration-emerald-200/40 underline-offset-2 hover:text-emerald-100"
-                >
-                  Source and rating guide
-                </a>
-              </p>
+              {selectedAdversary && (
+                <p className="mb-4 text-sm leading-6 text-[#aeb9ad]">
+                  Tiers are for level 6 adversaries in 4+ spirit games without
+                  outside support. An asterisk marks a matchup that may be
+                  harder to achieve at its listed tier.{' '}
+                  <a
+                    href="https://www.reddit.com/r/spiritisland/comments/1bqer7k/reds_matchup_axis_5_star_system/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-emerald-200 underline decoration-emerald-200/40 underline-offset-2 hover:text-emerald-100"
+                  >
+                    Source and rating guide
+                  </a>
+                </p>
+              )}
               <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {results.map(
                   ({ playerNumber, spirit, selectedAspectId }) => {
@@ -407,19 +440,21 @@ function App() {
                               className="min-h-11 w-full rounded-lg border border-white/15 bg-[#101814] px-3 text-base text-white focus-visible:outline-emerald-300"
                             >
                               <option value="">
-                                Base spirit — Tier{' '}
-                                {getMatchupTier(
-                                  spirit.id,
-                                  selectedAdversary?.id ?? '',
-                                ) ?? 'unavailable'}
+                                Base spirit
+                                {selectedAdversary &&
+                                  ` — Tier ${getMatchupTier(
+                                    spirit.id,
+                                    selectedAdversary.id,
+                                  ) ?? 'unavailable'}`}
                               </option>
                               {spirit.aspects.map((aspect) => (
                                 <option key={aspect.id} value={aspect.id}>
-                                  {aspect.name} — Tier{' '}
-                                  {getMatchupTier(
-                                    aspect.id,
-                                    selectedAdversary?.id ?? '',
-                                  ) ?? 'unavailable'}
+                                  {aspect.name}
+                                  {selectedAdversary &&
+                                    ` — Tier ${getMatchupTier(
+                                      aspect.id,
+                                      selectedAdversary.id,
+                                    ) ?? 'unavailable'}`}
                                 </option>
                               ))}
                             </select>
@@ -439,6 +474,10 @@ function App() {
               </ol>
             </section>
           )}
+        </div>
+
+        <div className={activeView === 'axis' ? '' : 'hidden'}>
+          <MatchupAxis />
         </div>
 
       </main>
