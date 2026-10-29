@@ -1,4 +1,81 @@
+import { useState } from 'react'
+import { spirits } from './data/spirits'
+import { randomizeSpirits } from './features/selector/randomizeSpirits'
+import type { SpiritComplexity } from './types/spirit'
+
+const complexities: readonly SpiritComplexity[] = [
+  'Low',
+  'Moderate',
+  'High',
+  'Very High',
+]
+
+const playerOptions = Array.from({ length: 6 }, (_, index) => index + 1)
+
 function App() {
+  const [playerCount, setPlayerCount] = useState(1)
+  const [playerComplexities, setPlayerComplexities] = useState<
+    readonly (readonly SpiritComplexity[])[]
+  >([complexities])
+  const [results, setResults] = useState<
+    readonly { playerNumber: number; spirit: (typeof spirits)[number] }[] | null
+  >(null)
+  const [error, setError] = useState<string | null>(null)
+
+  function changePlayerCount(count: number) {
+    setPlayerCount(count)
+    setPlayerComplexities((current) =>
+      Array.from(
+        { length: count },
+        (_, index) => current[index] ?? complexities,
+      ),
+    )
+    setResults(null)
+    setError(null)
+  }
+
+  function toggleComplexity(
+    playerIndex: number,
+    complexity: SpiritComplexity,
+  ) {
+    setPlayerComplexities((current) =>
+      current.map((selected, index) => {
+        if (index !== playerIndex) {
+          return selected
+        }
+
+        return selected.includes(complexity)
+          ? selected.filter((item) => item !== complexity)
+          : [...selected, complexity]
+      }),
+    )
+    setResults(null)
+    setError(null)
+  }
+
+  function generateSelection() {
+    const selection = randomizeSpirits(
+      spirits,
+      playerComplexities.slice(0, playerCount),
+    )
+
+    if (!selection) {
+      setResults(null)
+      setError(
+        'These complexity choices cannot give every player a different spirit. Try allowing more complexity levels.',
+      )
+      return
+    }
+
+    setResults(
+      selection.map((spirit, index) => ({
+        playerNumber: index + 1,
+        spirit,
+      })),
+    )
+    setError(null)
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#101814] text-[#f2f4ed]">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
@@ -6,7 +83,7 @@ function App() {
         <div className="absolute -bottom-56 -right-32 size-[32rem] rounded-full bg-[#536b48]/10 blur-3xl" />
       </div>
 
-      <header className="relative mx-auto flex w-full max-w-6xl items-center gap-3 px-6 py-6 sm:px-8">
+      <header className="relative mx-auto flex w-full max-w-5xl items-center gap-3 px-5 py-5 sm:px-8 sm:py-7">
         <span
           aria-hidden="true"
           className="grid size-9 place-items-center rounded-full border border-emerald-100/15"
@@ -18,30 +95,154 @@ function App() {
         </p>
       </header>
 
-      <main className="relative mx-auto flex min-h-[calc(100svh-81px)] w-full max-w-6xl items-center px-6 pb-20 pt-10 sm:px-8">
-        <section aria-labelledby="page-title" className="max-w-3xl">
-          <p className="mb-5 text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300/80">
-            A field guide for your next game
+      <main className="relative mx-auto w-full max-w-5xl px-5 pb-16 pt-6 sm:px-8 sm:pt-10">
+        <section aria-labelledby="page-title" className="mb-9">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300/80">
+            Choose your next spirit
           </p>
           <h1
             id="page-title"
-            className="text-5xl font-semibold leading-[1.05] tracking-tight text-[#f2f4ed] sm:text-6xl md:text-7xl"
+            className="text-4xl font-semibold leading-tight tracking-tight text-[#f2f4ed] sm:text-5xl"
           >
-            Spirit Island
-            <br />
-            Companion
+            Spirit Island Companion
           </h1>
-          <p className="mt-6 max-w-xl text-lg leading-8 text-[#b8c2b7] sm:text-xl">
-            Your companion for choosing your next spirit.
+          <p className="mt-3 max-w-xl text-base leading-7 text-[#b8c2b7] sm:text-lg">
+            Set your player count and choose which spirit complexities are in
+            the mix for each player.
           </p>
-          <div className="mt-9 inline-flex items-center gap-2.5 rounded-full border border-emerald-200/15 bg-emerald-950/40 px-4 py-2 text-sm text-[#dce8da]">
-            <span
-              aria-hidden="true"
-              className="size-1.5 rounded-full bg-emerald-300"
-            />
-            <span>Setup complete</span>
-          </div>
         </section>
+
+        <section
+          aria-labelledby="setup-title"
+          className="rounded-2xl border border-white/10 bg-[#17211b]/90 p-5 shadow-2xl shadow-black/10 sm:p-7"
+        >
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 id="setup-title" className="text-lg font-semibold">
+                Game setup
+              </h2>
+              <p className="mt-1 text-sm text-[#aeb9ad]">
+                Each player gets a different spirit.
+              </p>
+            </div>
+            <label className="flex items-center gap-3 text-sm font-medium text-[#d9e1d5]">
+              <span>Players</span>
+              <select
+                className="min-h-11 rounded-lg border border-white/15 bg-[#101814] px-3 text-base text-white focus-visible:outline-emerald-300"
+                value={playerCount}
+                onChange={(event) => changePlayerCount(Number(event.target.value))}
+              >
+                {playerOptions.map((count) => (
+                  <option key={count} value={count}>
+                    {count}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {playerComplexities.slice(0, playerCount).map((selected, index) => (
+              <fieldset
+                key={index}
+                className="rounded-xl border border-white/10 bg-[#101814]/70 p-4"
+              >
+                <legend className="px-1 text-sm font-semibold text-[#e2e8de]">
+                  Player {index + 1}
+                </legend>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {complexities.map((complexity) => {
+                    const inputId = `player-${index + 1}-${complexity
+                      .toLowerCase()
+                      .replace(' ', '-')}`
+
+                    return (
+                      <label
+                        key={complexity}
+                        htmlFor={inputId}
+                        className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-white/5 px-2.5 text-sm text-[#c5cec2] transition hover:border-emerald-200/20 hover:bg-white/5"
+                      >
+                        <input
+                          id={inputId}
+                          type="checkbox"
+                          checked={selected.includes(complexity)}
+                          onChange={() => toggleComplexity(index, complexity)}
+                          className="size-4 accent-emerald-400"
+                        />
+                        {complexity}
+                      </label>
+                    )
+                  })}
+                </div>
+              </fieldset>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={generateSelection}
+            className="mt-6 min-h-12 w-full rounded-xl bg-emerald-300 px-5 py-3 text-sm font-bold text-[#102016] transition hover:bg-emerald-200 focus-visible:outline-offset-4 sm:w-auto"
+          >
+            Pick spirits
+          </button>
+        </section>
+
+        <div aria-live="polite" className="mt-7">
+          {error && (
+            <p
+              role="alert"
+              className="rounded-xl border border-amber-200/20 bg-amber-950/30 px-4 py-3 text-sm leading-6 text-amber-100"
+            >
+              {error}
+            </p>
+          )}
+
+          {results && (
+            <section aria-labelledby="results-title">
+              <div className="mb-4 flex items-baseline justify-between gap-3">
+                <h2 id="results-title" className="text-xl font-semibold">
+                  Your spirits
+                </h2>
+                <p className="text-sm text-[#aeb9ad]">
+                  Ready for another draw?
+                </p>
+              </div>
+              <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {results.map(({ playerNumber, spirit }) => (
+                  <li
+                    key={spirit.id}
+                    className="rounded-xl border border-emerald-100/10 bg-[#17211b]/90 p-5"
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300/80">
+                      Player {playerNumber}
+                    </p>
+                    <h3 className="mt-2 text-lg font-semibold leading-snug text-[#f2f4ed]">
+                      {spirit.name}
+                    </h3>
+                    <dl className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#b8c2b7]">
+                      <div className="flex gap-1.5">
+                        <dt className="text-[#829084]">Complexity</dt>
+                        <dd>{spirit.complexity}</dd>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <dt className="text-[#829084]">Expansion</dt>
+                        <dd>{spirit.expansion}</dd>
+                      </div>
+                    </dl>
+                    <a
+                      href={spirit.artworkPageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-4 inline-flex min-h-10 items-center text-sm font-medium text-emerald-200 underline decoration-emerald-200/40 underline-offset-4 hover:text-emerald-100"
+                    >
+                      View spirit on the wiki
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+        </div>
       </main>
     </div>
   )
