@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { spirits } from '../../data/spirits'
 import type { SpiritComplexity } from '../../types/spirit'
-import { randomizeSpirits } from './randomizeSpirits'
+import {
+  applyGlobalComplexityFilter,
+  randomizeSpirits,
+} from './randomizeSpirits'
 
 const allComplexities: readonly SpiritComplexity[] = [
   'Low',
@@ -11,6 +14,18 @@ const allComplexities: readonly SpiritComplexity[] = [
 ]
 
 describe('randomizeSpirits', () => {
+  it('applies global complexity exclusions to every player', () => {
+    const preferences: readonly (readonly SpiritComplexity[])[] = [
+      ['Low', 'Moderate'],
+      ['Moderate', 'High'],
+    ]
+
+    expect(applyGlobalComplexityFilter(preferences, ['Moderate'])).toEqual([
+      ['Moderate'],
+      ['Moderate'],
+    ])
+  })
+
   it('selects one distinct eligible spirit for every player', () => {
     const preferences: readonly (readonly SpiritComplexity[])[] = [
       ['Low'],

@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { spirits } from './data/spirits'
-import { randomizeSpirits } from './features/selector/randomizeSpirits'
+import AdversarySelector from './features/selector/AdversarySelector'
+import {
+  applyGlobalComplexityFilter,
+  randomizeSpirits,
+} from './features/selector/randomizeSpirits'
 import type { SpiritComplexity } from './types/spirit'
 
 const complexities: readonly SpiritComplexity[] = [
@@ -14,6 +18,8 @@ const playerOptions = Array.from({ length: 6 }, (_, index) => index + 1)
 
 function App() {
   const [playerCount, setPlayerCount] = useState(1)
+  const [availableComplexities, setAvailableComplexities] =
+    useState<readonly SpiritComplexity[]>(complexities)
   const [playerComplexities, setPlayerComplexities] = useState<
     readonly (readonly SpiritComplexity[])[]
   >([complexities])
@@ -29,6 +35,16 @@ function App() {
         { length: count },
         (_, index) => current[index] ?? complexities,
       ),
+    )
+    setResults(null)
+    setError(null)
+  }
+
+  function toggleAvailableComplexity(complexity: SpiritComplexity) {
+    setAvailableComplexities((current) =>
+      current.includes(complexity)
+        ? current.filter((item) => item !== complexity)
+        : [...current, complexity],
     )
     setResults(null)
     setError(null)
@@ -56,13 +72,16 @@ function App() {
   function generateSelection() {
     const selection = randomizeSpirits(
       spirits,
-      playerComplexities.slice(0, playerCount),
+      applyGlobalComplexityFilter(
+        playerComplexities.slice(0, playerCount),
+        availableComplexities,
+      ),
     )
 
     if (!selection) {
       setResults(null)
       setError(
-        'These complexity choices cannot give every player a different spirit. Try allowing more complexity levels.',
+        'These complexity choices cannot give every player a different spirit. Enable more complexity levels or allow more levels for each player.',
       )
       return
     }
@@ -83,34 +102,11 @@ function App() {
         <div className="absolute -bottom-56 -right-32 size-[32rem] rounded-full bg-[#536b48]/10 blur-3xl" />
       </div>
 
-      <header className="relative mx-auto flex w-full max-w-5xl items-center gap-3 px-5 py-5 sm:px-8 sm:py-7">
-        <span
-          aria-hidden="true"
-          className="grid size-9 place-items-center rounded-full border border-emerald-100/15"
-        >
-          <span className="size-2 rounded-full bg-emerald-300" />
-        </span>
-        <p className="text-sm font-medium tracking-wide text-[#d9e1d5]">
-          Spirit Island Companion
-        </p>
-      </header>
-
-      <main className="relative mx-auto w-full max-w-5xl px-5 pb-16 pt-6 sm:px-8 sm:pt-10">
-        <section aria-labelledby="page-title" className="mb-9">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300/80">
-            Choose your next spirit
-          </p>
-          <h1
-            id="page-title"
-            className="text-4xl font-semibold leading-tight tracking-tight text-[#f2f4ed] sm:text-5xl"
-          >
-            Spirit Island Companion
-          </h1>
-          <p className="mt-3 max-w-xl text-base leading-7 text-[#b8c2b7] sm:text-lg">
-            Set your player count and choose which spirit complexities are in
-            the mix for each player.
-          </p>
-        </section>
+      <main className="relative mx-auto flex w-full max-w-5xl flex-col gap-7 px-5 pb-16 pt-8 sm:px-8 sm:pt-10">
+        <h1 className="text-3xl font-semibold tracking-tight text-[#f2f4ed] sm:text-4xl">
+          Spirit Island Helper
+        </h1>
+        <AdversarySelector />
 
         <section
           aria-labelledby="setup-title"
@@ -121,9 +117,6 @@ function App() {
               <h2 id="setup-title" className="text-lg font-semibold">
                 Game setup
               </h2>
-              <p className="mt-1 text-sm text-[#aeb9ad]">
-                Each player gets a different spirit.
-              </p>
             </div>
             <label className="flex items-center gap-3 text-sm font-medium text-[#d9e1d5]">
               <span>Players</span>
@@ -140,6 +133,39 @@ function App() {
               </select>
             </label>
           </div>
+
+          <fieldset className="mt-6 rounded-xl border border-emerald-100/10 bg-[#101814]/50 p-4 sm:p-5">
+            <legend className="px-1 text-sm font-semibold text-[#e2e8de]">
+              Complexities available to everyone
+            </legend>
+            <p className="mb-3 text-sm text-[#aeb9ad]">
+              Turn a level off here to exclude it for every player.
+            </p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {complexities.map((complexity) => {
+                const inputId = `all-players-${complexity
+                  .toLowerCase()
+                  .replace(' ', '-')}`
+
+                return (
+                  <label
+                    key={complexity}
+                    htmlFor={inputId}
+                    className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-white/5 px-2.5 text-sm text-[#c5cec2] transition hover:border-emerald-200/20 hover:bg-white/5"
+                  >
+                    <input
+                      id={inputId}
+                      type="checkbox"
+                      checked={availableComplexities.includes(complexity)}
+                      onChange={() => toggleAvailableComplexity(complexity)}
+                      className="size-4 accent-emerald-400"
+                    />
+                    {complexity}
+                  </label>
+                )
+              })}
+            </div>
+          </fieldset>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {playerComplexities.slice(0, playerCount).map((selected, index) => (
@@ -166,10 +192,19 @@ function App() {
                           id={inputId}
                           type="checkbox"
                           checked={selected.includes(complexity)}
+                          disabled={!availableComplexities.includes(complexity)}
                           onChange={() => toggleComplexity(index, complexity)}
-                          className="size-4 accent-emerald-400"
+                          className="size-4 accent-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
                         />
-                        {complexity}
+                        <span
+                          className={
+                            availableComplexities.includes(complexity)
+                              ? ''
+                              : 'opacity-50'
+                          }
+                        >
+                          {complexity}
+                        </span>
                       </label>
                     )
                   })}
@@ -229,20 +264,13 @@ function App() {
                         <dd>{spirit.expansion}</dd>
                       </div>
                     </dl>
-                    <a
-                      href={spirit.artworkPageUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-4 inline-flex min-h-10 items-center text-sm font-medium text-emerald-200 underline decoration-emerald-200/40 underline-offset-4 hover:text-emerald-100"
-                    >
-                      View spirit on the wiki
-                    </a>
                   </li>
                 ))}
               </ol>
             </section>
           )}
         </div>
+
       </main>
     </div>
   )

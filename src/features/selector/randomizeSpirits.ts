@@ -1,5 +1,16 @@
 import type { Spirit, SpiritComplexity } from '../../types/spirit'
 
+export function applyGlobalComplexityFilter(
+  playerComplexities: readonly (readonly SpiritComplexity[])[],
+  availableComplexities: readonly SpiritComplexity[],
+): readonly (readonly SpiritComplexity[])[] {
+  return playerComplexities.map((complexities) =>
+    complexities.filter((complexity) =>
+      availableComplexities.includes(complexity),
+    ),
+  )
+}
+
 export function randomizeSpirits(
   spirits: readonly Spirit[],
   playerComplexities: readonly (readonly SpiritComplexity[])[],

@@ -1,6 +1,6 @@
-# Spirit Island Companion
+# Spirit Island Helper
 
-A static, mobile-friendly companion website built with React, TypeScript, Vite, and Tailwind CSS.
+A static, mobile-friendly helper website built with React, TypeScript, Vite, and Tailwind CSS.
 
 ## Prerequisites
 
