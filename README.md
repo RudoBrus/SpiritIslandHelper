@@ -55,3 +55,29 @@ The static production files are written to `dist/`. To serve that build locally:
 ```sh
 npm run preview
 ```
+
+## GitHub Pages
+
+The site is configured for this repository's project URL:
+<https://rudobrus.github.io/SpiritIslandHelper/>.
+
+### One-time GitHub setup
+
+1. Push the project to the `main` branch.
+2. In the GitHub repository, open **Settings → Pages**.
+3. Under **Build and deployment**, set **Source** to **GitHub Actions**.
+4. Open the **Actions** tab and wait for the **Deploy to GitHub Pages**
+   workflow to finish. The site URL is also shown in the workflow's deployment
+   environment.
+5. Open <https://rudobrus.github.io/SpiritIslandHelper/> on your phone.
+
+The workflow in `.github/workflows/deploy.yml` runs the tests, lint, and
+production build, then publishes `dist/`. It runs automatically when changes
+are pushed to `main`; it can also be started manually from the **Actions** tab.
+To publish an update, commit your changes and push them to `main`:
+
+```sh
+git add .
+git commit -m "Describe your changes"
+git push
+```

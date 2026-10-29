@@ -3,6 +3,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  base: '/SpiritIslandHelper/',
   plugins: [react(), tailwindcss()],
   test: {
     include: ['src/**/*.test.{ts,tsx}'],
