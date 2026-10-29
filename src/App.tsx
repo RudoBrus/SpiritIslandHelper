@@ -3,6 +3,7 @@ import { spirits } from './data/spirits'
 import AdversarySelector from './features/selector/AdversarySelector'
 import {
   applyGlobalComplexityFilter,
+  rerollSpirit,
   randomizeSpirits,
 } from './features/selector/randomizeSpirits'
 import type { SpiritAspect, SpiritComplexity } from './types/spirit'
@@ -119,6 +120,44 @@ function App() {
           : result,
       )
     })
+  }
+
+  function rerollPlayer(playerNumber: number) {
+    if (!results) {
+      return
+    }
+
+    const playerIndex = playerNumber - 1
+    const availableForPlayer =
+      applyGlobalComplexityFilter(
+        [playerComplexities[playerIndex] ?? []],
+        availableComplexities,
+      )[0] ?? []
+    const replacement = rerollSpirit(
+      spirits,
+      availableForPlayer,
+      new Set(results.map((result) => result.spirit.id)),
+    )
+
+    if (!replacement) {
+      setError(
+        `No different eligible spirit is available for Player ${playerNumber} without changing anyone else's spirit. Adjust the complexity choices or pick spirits again for everyone.`,
+      )
+      return
+    }
+
+    setResults(
+      results.map((result) =>
+        result.playerNumber === playerNumber
+          ? {
+              ...result,
+              spirit: replacement,
+              selectedAspectId: null,
+            }
+          : result,
+      ),
+    )
+    setError(null)
   }
 
   return (
@@ -280,9 +319,19 @@ function App() {
                         key={spirit.id}
                         className="rounded-xl border border-emerald-100/10 bg-[#17211b]/90 p-5"
                       >
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300/80">
-                          Player {playerNumber}
-                        </p>
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300/80">
+                            Player {playerNumber}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => rerollPlayer(playerNumber)}
+                            aria-label={`Reroll spirit for Player ${playerNumber}`}
+                            className="min-h-9 rounded-lg border border-emerald-200/20 px-3 text-sm font-semibold text-emerald-200 transition hover:border-emerald-200/40 hover:bg-emerald-200/10 focus-visible:outline-emerald-300"
+                          >
+                            Reroll
+                          </button>
+                        </div>
                         <h3 className="mt-2 text-lg font-semibold leading-snug text-[#f2f4ed]">
                           {spirit.name}
                         </h3>

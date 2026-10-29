@@ -94,6 +94,24 @@ export function randomizeSpirits(
   })
 }
 
+export function rerollSpirit(
+  spirits: readonly Spirit[],
+  playerComplexities: readonly SpiritComplexity[],
+  excludedSpiritIds: ReadonlySet<string>,
+  random: () => number = Math.random,
+): Spirit | null {
+  const candidates = shuffle(
+    spirits.filter(
+      (spirit) =>
+        playerComplexities.includes(spirit.complexity) &&
+        !excludedSpiritIds.has(spirit.id),
+    ),
+    random,
+  )
+
+  return candidates[0] ?? null
+}
+
 function shuffle<T>(items: readonly T[], random: () => number): T[] {
   const shuffled = [...items]
 

@@ -64,6 +64,9 @@ expansion, and whether they change the spirit's complexity; it does not include
 aspect card text or artwork. The Spirit Island Wiki's spirit pages provide
 aspect references, for example
 <https://spiritislandwiki.com/index.php/River_Surges_in_Sunlight#tab=Aspects>.
+Each result card also lets its player reroll their spirit independently, while
+keeping other players' spirits unchanged and honoring the active complexity
+choices.
 
 ## GitHub Pages
 

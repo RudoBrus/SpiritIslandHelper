@@ -3,6 +3,7 @@ import { spirits } from '../../data/spirits'
 import type { SpiritComplexity } from '../../types/spirit'
 import {
   applyGlobalComplexityFilter,
+  rerollSpirit,
   randomizeSpirits,
 } from './randomizeSpirits'
 
@@ -67,5 +68,29 @@ describe('randomizeSpirits', () => {
 
     expect(results).toHaveLength(2)
     expect(new Set(results?.map((spirit) => spirit.id)).size).toBe(2)
+  })
+
+  it('rerolls to an eligible spirit without choosing anyone else’s spirit', () => {
+    const alreadySelected = new Set([
+      'lightnings-swift-strike',
+      'river-surges-in-sunlight',
+    ])
+    const rerolled = rerollSpirit(
+      spirits,
+      ['Low'],
+      alreadySelected,
+      () => 0,
+    )
+
+    expect(rerolled).not.toBeNull()
+    expect(rerolled?.complexity).toBe('Low')
+    expect(alreadySelected.has(rerolled?.id ?? '')).toBe(false)
+  })
+
+  it('returns null when no alternate eligible spirit is available', () => {
+    const lowSpirits = spirits.filter((spirit) => spirit.complexity === 'Low')
+    const alreadySelected = new Set(lowSpirits.map((spirit) => spirit.id))
+
+    expect(rerollSpirit(spirits, ['Low'], alreadySelected, () => 0)).toBeNull()
   })
 })
