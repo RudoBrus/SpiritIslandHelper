@@ -378,10 +378,6 @@ function App() {
                             <dt className="text-[#829084]">Complexity</dt>
                             <dd>{spirit.complexity}</dd>
                           </div>
-                          <div className="flex gap-1.5">
-                            <dt className="text-[#829084]">Expansion</dt>
-                            <dd>{spirit.expansion}</dd>
-                          </div>
                           {matchupTier && (
                             <div className="flex gap-1.5">
                               <dt className="text-[#829084]">Matchup tier</dt>
@@ -410,10 +406,20 @@ function App() {
                               }
                               className="min-h-11 w-full rounded-lg border border-white/15 bg-[#101814] px-3 text-base text-white focus-visible:outline-emerald-300"
                             >
-                              <option value="">Base spirit</option>
+                              <option value="">
+                                Base spirit — Tier{' '}
+                                {getMatchupTier(
+                                  spirit.id,
+                                  selectedAdversary?.id ?? '',
+                                ) ?? 'unavailable'}
+                              </option>
                               {spirit.aspects.map((aspect) => (
                                 <option key={aspect.id} value={aspect.id}>
-                                  {aspect.name} ({aspect.expansion})
+                                  {aspect.name} — Tier{' '}
+                                  {getMatchupTier(
+                                    aspect.id,
+                                    selectedAdversary?.id ?? '',
+                                  ) ?? 'unavailable'}
                                 </option>
                               ))}
                             </select>
