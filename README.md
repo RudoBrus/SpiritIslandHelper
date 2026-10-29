@@ -68,6 +68,22 @@ Each result card also lets its player reroll their spirit independently, while
 keeping other players' spirits unchanged and honoring the active complexity
 choices.
 
+## Spirit/adversary matchup tiers
+
+Pick an adversary before drawing spirits. Each selected spirit shows its
+matchup tier against that adversary; choosing an aspect uses the aspect-specific
+tier when one is listed. Changing the adversary clears the current spirit draw
+so players can make a new selection for the new matchup.
+
+The matchup grades and special asterisks are transcribed with the author's
+permission from
+[Red's Match-up Axis: 5 Star System](https://www.reddit.com/r/spiritisland/comments/1bqer7k/reds_matchup_axis_5_star_system/).
+The ratings are the author's assessment for level 6 adversaries, multiplayer
+games with 4 or more spirits, no outside support, no scenario, balanced boards,
+and optimal play. An asterisk is the author's marker for a matchup that may be
+harder to achieve at its listed tier. These ratings are subjective guidance,
+not a guarantee of game outcomes.
+
 ## GitHub Pages
 
 The site is configured for this repository's project URL:

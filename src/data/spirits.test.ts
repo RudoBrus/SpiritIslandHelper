@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { aspectsBySpiritId } from './aspects'
+import { adversaries } from './adversaries'
+import { adversaryOrder, getMatchupTier, matchupRatings } from './matchups'
 import { spirits } from './spirits'
 
 describe('spirit data', () => {
@@ -56,5 +58,41 @@ describe('spirit data', () => {
       'Sunshine',
       'Travel',
     ])
+  })
+
+  it('includes a matchup tier for every spirit, aspect, and adversary', () => {
+    const expectedEntityIds = spirits.flatMap((spirit) => [
+      spirit.id,
+      ...spirit.aspects.map((aspect) => aspect.id),
+    ])
+
+    expect(Object.keys(matchupRatings).sort()).toEqual(
+      expectedEntityIds.sort(),
+    )
+    expect(adversaryOrder).toHaveLength(adversaries.length)
+    expect(new Set(adversaryOrder)).toEqual(
+      new Set(adversaries.map((adversary) => adversary.id)),
+    )
+    expect(
+      expectedEntityIds.every((entityId) =>
+        adversaryOrder.every(
+          (adversaryId) => getMatchupTier(entityId, adversaryId) !== null,
+        ),
+      ),
+    ).toBe(true)
+    expect(
+      Object.values(matchupRatings).every(
+        (ratings) =>
+          ratings.length === adversaries.length &&
+          ratings.every((rating) => /^[FDCBAS]\*?$/.test(rating)),
+      ),
+    ).toBe(true)
+  })
+
+  it('returns the selected aspect matchup tier and preserves special markers', () => {
+    expect(getMatchupTier('river-surges-in-sunlight', 'sweden')).toBe('C*')
+    expect(getMatchupTier('river-travel', 'sweden')).toBe('B*')
+    expect(getMatchupTier('river-haven', 'scotland')).toBe('A')
+    expect(getMatchupTier('river-surges-in-sunlight', 'not-an-adversary')).toBeNull()
   })
 })

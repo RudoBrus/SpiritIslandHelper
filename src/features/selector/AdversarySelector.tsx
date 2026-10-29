@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { adversaries } from '../../data/adversaries'
+import type { Adversary } from '../../types/adversary'
 import {
   randomizeAdversary,
   sortAdversariesByLevel6Difficulty,
@@ -7,7 +8,13 @@ import {
 
 const sortedAdversaries = sortAdversariesByLevel6Difficulty(adversaries)
 
-function AdversarySelector() {
+type AdversarySelectorProps = {
+  readonly onSelectionChange: (adversary: Adversary | null) => void
+}
+
+function AdversarySelector({
+  onSelectionChange,
+}: AdversarySelectorProps) {
   const [excludedAdversaryIds, setExcludedAdversaryIds] = useState<
     ReadonlySet<string>
   >(new Set())
@@ -28,6 +35,7 @@ function AdversarySelector() {
       return updated
     })
     setSelectedAdversary(null)
+    onSelectionChange(null)
     setError(null)
   }
 
@@ -41,6 +49,7 @@ function AdversarySelector() {
     }
 
     setSelectedAdversary(adversary)
+    onSelectionChange(adversary)
     setError(null)
   }
 

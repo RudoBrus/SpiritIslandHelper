@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import type { Adversary } from './types/adversary'
+import { getMatchupTier } from './data/matchups'
 import { spirits } from './data/spirits'
 import AdversarySelector from './features/selector/AdversarySelector'
 import {
@@ -30,6 +32,8 @@ function App() {
   const [playerComplexities, setPlayerComplexities] = useState<
     readonly (readonly SpiritComplexity[])[]
   >([complexities])
+  const [selectedAdversary, setSelectedAdversary] =
+    useState<Adversary | null>(null)
   const [results, setResults] = useState<
     | readonly {
         playerNumber: number
@@ -39,6 +43,12 @@ function App() {
     | null
   >(null)
   const [error, setError] = useState<string | null>(null)
+
+  function changeAdversary(adversary: Adversary | null) {
+    setSelectedAdversary(adversary)
+    setResults(null)
+    setError(null)
+  }
 
   function changePlayerCount(count: number) {
     setPlayerCount(count)
@@ -82,6 +92,11 @@ function App() {
   }
 
   function generateSelection() {
+    if (!selectedAdversary) {
+      setError('Pick an adversary before selecting spirits.')
+      return
+    }
+
     const selection = randomizeSpirits(
       spirits,
       applyGlobalComplexityFilter(
@@ -171,7 +186,7 @@ function App() {
         <h1 className="text-3xl font-semibold tracking-tight text-[#f2f4ed] sm:text-4xl">
           Spirit Island Helper
         </h1>
-        <AdversarySelector />
+        <AdversarySelector onSelectionChange={changeAdversary} />
 
         <section
           aria-labelledby="setup-title"
@@ -281,10 +296,16 @@ function App() {
           <button
             type="button"
             onClick={generateSelection}
-            className="mt-6 min-h-12 w-full rounded-xl bg-emerald-300 px-5 py-3 text-sm font-bold text-[#102016] transition hover:bg-emerald-200 focus-visible:outline-offset-4 sm:w-auto"
+            disabled={!selectedAdversary}
+            className="mt-6 min-h-12 w-full rounded-xl bg-emerald-300 px-5 py-3 text-sm font-bold text-[#102016] transition hover:bg-emerald-200 focus-visible:outline-offset-4 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             Pick spirits
           </button>
+          {!selectedAdversary && (
+            <p className="mt-3 text-sm text-[#aeb9ad]">
+              Pick an adversary above to unlock spirit selection.
+            </p>
+          )}
         </section>
 
         <div aria-live="polite" className="mt-7">
@@ -304,14 +325,31 @@ function App() {
                   Your spirits
                 </h2>
                 <p className="text-sm text-[#aeb9ad]">
-                  Ready for another draw?
+                  Matchup tier vs. {selectedAdversary?.name}
                 </p>
               </div>
+              <p className="mb-4 text-sm leading-6 text-[#aeb9ad]">
+                Tiers are for level 6 adversaries in 4+ spirit games without
+                outside support. An asterisk marks a matchup that may be harder
+                to achieve at its listed tier.{' '}
+                <a
+                  href="https://www.reddit.com/r/spiritisland/comments/1bqer7k/reds_matchup_axis_5_star_system/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-emerald-200 underline decoration-emerald-200/40 underline-offset-2 hover:text-emerald-100"
+                >
+                  Source and rating guide
+                </a>
+              </p>
               <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {results.map(
                   ({ playerNumber, spirit, selectedAspectId }) => {
                     const selectedAspect = spirit.aspects.find(
                       (aspect) => aspect.id === selectedAspectId,
+                    )
+                    const matchupTier = getMatchupTier(
+                      selectedAspect?.id ?? spirit.id,
+                      selectedAdversary?.id ?? '',
                     )
 
                     return (
@@ -344,6 +382,14 @@ function App() {
                             <dt className="text-[#829084]">Expansion</dt>
                             <dd>{spirit.expansion}</dd>
                           </div>
+                          {matchupTier && (
+                            <div className="flex gap-1.5">
+                              <dt className="text-[#829084]">Matchup tier</dt>
+                              <dd aria-label={`Tier ${matchupTier}`}>
+                                {matchupTier}
+                              </dd>
+                            </div>
+                          )}
                         </dl>
                         {spirit.aspects.length > 0 && (
                           <div className="mt-5">
