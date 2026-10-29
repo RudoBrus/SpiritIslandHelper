@@ -5,7 +5,7 @@ import {
   applyGlobalComplexityFilter,
   randomizeSpirits,
 } from './features/selector/randomizeSpirits'
-import type { SpiritComplexity } from './types/spirit'
+import type { SpiritAspect, SpiritComplexity } from './types/spirit'
 
 const complexities: readonly SpiritComplexity[] = [
   'Low',
@@ -16,6 +16,12 @@ const complexities: readonly SpiritComplexity[] = [
 
 const playerOptions = Array.from({ length: 6 }, (_, index) => index + 1)
 
+const complexityModifierLabels: Record<SpiritAspect['complexityModifier'], string> = {
+  '+': 'Increases complexity',
+  '=': 'No complexity change',
+  '−': 'Decreases complexity',
+}
+
 function App() {
   const [playerCount, setPlayerCount] = useState(1)
   const [availableComplexities, setAvailableComplexities] =
@@ -24,7 +30,12 @@ function App() {
     readonly (readonly SpiritComplexity[])[]
   >([complexities])
   const [results, setResults] = useState<
-    readonly { playerNumber: number; spirit: (typeof spirits)[number] }[] | null
+    | readonly {
+        playerNumber: number
+        spirit: (typeof spirits)[number]
+        selectedAspectId: string | null
+      }[]
+    | null
   >(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -90,9 +101,24 @@ function App() {
       selection.map((spirit, index) => ({
         playerNumber: index + 1,
         spirit,
+        selectedAspectId: null,
       })),
     )
     setError(null)
+  }
+
+  function chooseAspect(spiritId: string, aspectId: string | null) {
+    setResults((current) => {
+      if (!current) {
+        return null
+      }
+
+      return current.map((result) =>
+        result.spirit.id === spiritId
+          ? { ...result, selectedAspectId: aspectId }
+          : result,
+      )
+    })
   }
 
   return (
@@ -243,29 +269,72 @@ function App() {
                 </p>
               </div>
               <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {results.map(({ playerNumber, spirit }) => (
-                  <li
-                    key={spirit.id}
-                    className="rounded-xl border border-emerald-100/10 bg-[#17211b]/90 p-5"
-                  >
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300/80">
-                      Player {playerNumber}
-                    </p>
-                    <h3 className="mt-2 text-lg font-semibold leading-snug text-[#f2f4ed]">
-                      {spirit.name}
-                    </h3>
-                    <dl className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#b8c2b7]">
-                      <div className="flex gap-1.5">
-                        <dt className="text-[#829084]">Complexity</dt>
-                        <dd>{spirit.complexity}</dd>
-                      </div>
-                      <div className="flex gap-1.5">
-                        <dt className="text-[#829084]">Expansion</dt>
-                        <dd>{spirit.expansion}</dd>
-                      </div>
-                    </dl>
-                  </li>
-                ))}
+                {results.map(
+                  ({ playerNumber, spirit, selectedAspectId }) => {
+                    const selectedAspect = spirit.aspects.find(
+                      (aspect) => aspect.id === selectedAspectId,
+                    )
+
+                    return (
+                      <li
+                        key={spirit.id}
+                        className="rounded-xl border border-emerald-100/10 bg-[#17211b]/90 p-5"
+                      >
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300/80">
+                          Player {playerNumber}
+                        </p>
+                        <h3 className="mt-2 text-lg font-semibold leading-snug text-[#f2f4ed]">
+                          {spirit.name}
+                        </h3>
+                        <dl className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#b8c2b7]">
+                          <div className="flex gap-1.5">
+                            <dt className="text-[#829084]">Complexity</dt>
+                            <dd>{spirit.complexity}</dd>
+                          </div>
+                          <div className="flex gap-1.5">
+                            <dt className="text-[#829084]">Expansion</dt>
+                            <dd>{spirit.expansion}</dd>
+                          </div>
+                        </dl>
+                        {spirit.aspects.length > 0 && (
+                          <div className="mt-5">
+                            <label
+                              htmlFor={`aspect-${spirit.id}`}
+                              className="mb-2 block text-sm font-medium text-[#d9e1d5]"
+                            >
+                              Aspect (optional)
+                            </label>
+                            <select
+                              id={`aspect-${spirit.id}`}
+                              value={selectedAspectId ?? ''}
+                              onChange={(event) =>
+                                chooseAspect(
+                                  spirit.id,
+                                  event.target.value || null,
+                                )
+                              }
+                              className="min-h-11 w-full rounded-lg border border-white/15 bg-[#101814] px-3 text-base text-white focus-visible:outline-emerald-300"
+                            >
+                              <option value="">Base spirit</option>
+                              {spirit.aspects.map((aspect) => (
+                                <option key={aspect.id} value={aspect.id}>
+                                  {aspect.name} ({aspect.expansion})
+                                </option>
+                              ))}
+                            </select>
+                            {selectedAspect && (
+                              <p className="mt-2 text-sm text-[#aeb9ad]">
+                                {complexityModifierLabels[
+                                  selectedAspect.complexityModifier
+                                ]}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </li>
+                    )
+                  },
+                )}
               </ol>
             </section>
           )}

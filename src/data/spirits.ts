@@ -1,4 +1,5 @@
 import type { Spirit } from '../types/spirit'
+import { aspectsBySpiritId } from './aspects'
 
 const spiritMetadata = [
   {
@@ -223,7 +224,10 @@ const spiritMetadata = [
     complexity: 'Moderate',
     expansion: 'Branch and Claw',
   },
-] satisfies readonly Omit<Spirit, 'artworkUrl' | 'artworkPageUrl'>[]
+] satisfies readonly Omit<
+  Spirit,
+  'artworkUrl' | 'artworkPageUrl' | 'aspects'
+>[]
 
 function getArtworkPageUrl(name: string): string {
   const fileTitle = `${name}.png`.replaceAll(' ', '_')
@@ -236,4 +240,5 @@ export const spirits: readonly Spirit[] = spiritMetadata.map((spirit) => ({
   ...spirit,
   artworkUrl: null,
   artworkPageUrl: getArtworkPageUrl(spirit.name),
+  aspects: aspectsBySpiritId[spirit.id] ?? [],
 }))

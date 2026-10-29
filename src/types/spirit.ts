@@ -1,5 +1,12 @@
 export type SpiritComplexity = 'Low' | 'Moderate' | 'High' | 'Very High'
 
+export type SpiritAspect = {
+  readonly id: string
+  readonly name: string
+  readonly expansion: string
+  readonly complexityModifier: '+' | '=' | '−'
+}
+
 export type Spirit = {
   readonly id: string
   readonly name: string
@@ -7,4 +14,5 @@ export type Spirit = {
   readonly artworkPageUrl: string
   readonly complexity: SpiritComplexity
   readonly expansion: string
+  readonly aspects: readonly SpiritAspect[]
 }

@@ -56,6 +56,15 @@ The static production files are written to `dist/`. To serve that build locally:
 npm run preview
 ```
 
+## Spirit aspects
+
+After spirits are selected, players can optionally choose a listed aspect from
+their spirit's result card. The local data includes aspect names, their
+expansion, and whether they change the spirit's complexity; it does not include
+aspect card text or artwork. The Spirit Island Wiki's spirit pages provide
+aspect references, for example
+<https://spiritislandwiki.com/index.php/River_Surges_in_Sunlight#tab=Aspects>.
+
 ## GitHub Pages
 
 The site is configured for this repository's project URL:
