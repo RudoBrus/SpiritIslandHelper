@@ -144,32 +144,17 @@ function GeneralTierList() {
           <h2 id="general-tier-list-title" className="text-xl font-semibold">
             General spirit tier list
           </h2>
-          <p className="mt-1 text-sm text-[#aeb9ad]">
-            Drag tiles between tiers or onto another tile to set their order.
-            On touch screens, tap a tile, then tap a tier or another tile.
-            Changes are saved in this browser.
-          </p>
         </div>
-        <div className="flex shrink-0 gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              savePlacements(defaultTierPlacements)
-              setSelectedItemId(null)
-            }}
-            className="min-h-9 rounded-lg border border-white/10 px-3 text-xs font-medium text-[#c5cec2] transition hover:border-emerald-200/30 hover:text-emerald-100 focus-visible:outline-emerald-300"
-          >
-            Reset tiers
-          </button>
-          <a
-            href="https://tiermaker.com/create/all-spirit-island-spirits-and-aspects-up-to-nature-incarnate-16256762?presentationMode=true"
-            target="_blank"
-            rel="noreferrer"
-            className="self-center text-sm text-emerald-200 underline decoration-emerald-200/40 underline-offset-2 hover:text-emerald-100"
-          >
-            Source template
-          </a>
-        </div>
+        <button
+          type="button"
+          onClick={() => {
+            savePlacements(defaultTierPlacements)
+            setSelectedItemId(null)
+          }}
+          className="min-h-9 shrink-0 self-start rounded-lg border border-white/10 px-3 text-xs font-medium text-[#c5cec2] transition hover:border-emerald-200/30 hover:text-emerald-100 focus-visible:outline-emerald-300 sm:self-auto"
+        >
+          Reset tiers
+        </button>
       </div>
 
       {storageMessage && (
