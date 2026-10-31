@@ -623,7 +623,13 @@ function App() {
           )}
         </div>
 
-        <div className={activeView === 'axis' ? '' : 'hidden'}>
+        <div
+          className={
+            activeView === 'axis'
+              ? '-mx-5 w-[calc(100%+2.5rem)] sm:mx-0 sm:w-full'
+              : 'hidden'
+          }
+        >
           <MatchupAxis />
         </div>
 

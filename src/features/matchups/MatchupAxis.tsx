@@ -132,7 +132,7 @@ function MatchupAxis() {
   return (
     <section
       aria-labelledby="matchup-axis-title"
-      className="rounded-2xl border border-white/10 bg-[#17211b]/90 p-5 shadow-2xl shadow-black/10 sm:p-7"
+      className="rounded-none border-y border-white/10 bg-[#17211b]/90 p-3 shadow-2xl shadow-black/10 sm:rounded-2xl sm:border sm:p-7"
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -154,8 +154,8 @@ function MatchupAxis() {
         </a>
       </div>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
-        <label className="flex flex-col gap-2 text-sm font-medium text-[#d9e1d5]">
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-6 sm:grid-cols-3">
+        <label className="col-span-2 flex flex-col gap-2 text-sm font-medium text-[#d9e1d5] sm:col-span-1">
           Adversary
           <select
             value={selectedAdversaryId}
@@ -210,24 +210,30 @@ function MatchupAxis() {
       </p>
 
       <div
-        className="mt-3 overflow-x-auto rounded-xl border border-white/10"
+        className="-mx-3 mt-3 overflow-x-auto border-y border-white/10 sm:mx-0 sm:rounded-xl sm:border"
         tabIndex={0}
         role="region"
         aria-label="Scrollable matchup table"
       >
-        <table className="w-full min-w-[48rem] border-collapse text-left text-sm">
+        <table
+          className={`w-full border-collapse text-left text-sm ${
+            visibleAdversaries.length > 1
+              ? 'min-w-[40rem] sm:min-w-[48rem]'
+              : 'min-w-full sm:min-w-[48rem]'
+          }`}
+        >
           <thead className="bg-[#101814] text-xs uppercase tracking-wide text-[#b8c2b7]">
             <tr>
               {renderSortHeader(
                 'spirit',
                 'Spirit',
-                'sticky left-0 z-10 w-28 min-w-28 max-w-28 border-b border-white/10 bg-[#101814] px-2 py-3 sm:w-56 sm:min-w-56 sm:max-w-none sm:px-3',
+                'sticky left-0 z-10 w-24 min-w-24 max-w-24 border-b border-white/10 bg-[#101814] px-2 py-3 sm:w-56 sm:min-w-56 sm:max-w-none sm:px-3',
               )}
               {visibleAdversaries.map((adversary) =>
                 renderSortHeader(
                     adversary.id,
                     adversary.name,
-                    'min-w-20 border-b border-white/10 px-2 py-3 sm:min-w-28 sm:px-3',
+                    'min-w-16 border-b border-white/10 px-1.5 py-3 sm:min-w-28 sm:px-3',
                     adversary.id,
                   ),
               )}
@@ -241,7 +247,7 @@ function MatchupAxis() {
               >
                 <th
                   scope="row"
-                  className="sticky left-0 z-10 w-28 min-w-28 max-w-28 break-words bg-[#17211b] px-2 py-2.5 font-medium text-[#e2e8de] sm:w-56 sm:min-w-56 sm:max-w-none sm:px-3"
+                  className="sticky left-0 z-10 w-24 min-w-24 max-w-24 break-words bg-[#17211b] px-2 py-2.5 font-medium text-[#e2e8de] sm:w-56 sm:min-w-56 sm:max-w-none sm:px-3"
                 >
                   <span className="block">{row.spiritName}</span>
                   {row.name && (
@@ -256,7 +262,7 @@ function MatchupAxis() {
                   return (
                     <td
                       key={adversary.id}
-                      className="px-1.5 py-2 text-center sm:px-3"
+                      className="px-1 py-2 text-center sm:px-3"
                       title={
                         tier
                           ? `Tier ${tier}${tier.endsWith('*') ? ' — asterisk marker' : ''}`
