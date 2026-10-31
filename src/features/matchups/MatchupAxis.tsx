@@ -223,11 +223,6 @@ function MatchupAxis() {
                 'Spirit',
                 'sticky left-0 z-10 w-28 min-w-28 max-w-28 border-b border-white/10 bg-[#101814] px-2 py-3 sm:w-56 sm:min-w-56 sm:max-w-none sm:px-3',
               )}
-              {renderSortHeader(
-                'complexity',
-                'Complexity',
-                'min-w-24 border-b border-white/10 px-2 py-3 sm:min-w-28 sm:px-3',
-              )}
               {visibleAdversaries.map((adversary) =>
                 renderSortHeader(
                     adversary.id,
@@ -255,9 +250,6 @@ function MatchupAxis() {
                     </span>
                   )}
                 </th>
-                <td className="px-3 py-2.5 text-[#b8c2b7]">
-                  {row.complexity}
-                </td>
                 {visibleAdversaries.map((adversary) => {
                   const tier = getMatchupTier(row.id, adversary.id)
 
@@ -291,7 +283,7 @@ function MatchupAxis() {
             {visibleRows.length === 0 && (
               <tr>
                 <td
-                  colSpan={visibleAdversaries.length + 2}
+                  colSpan={visibleAdversaries.length + 1}
                   className="px-4 py-10 text-center text-[#aeb9ad]"
                 >
                   No spirits or aspects match these filters.
