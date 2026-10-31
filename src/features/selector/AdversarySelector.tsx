@@ -22,6 +22,15 @@ function AdversarySelector({
     useState<(typeof adversaries)[number] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  function setAllIncluded(included: boolean) {
+    setExcludedAdversaryIds(
+      included ? new Set() : new Set(adversaries.map((adversary) => adversary.id)),
+    )
+    setSelectedAdversary(null)
+    onSelectionChange(null)
+    setError(null)
+  }
+
   function toggleAdversary(adversaryId: string) {
     setExcludedAdversaryIds((current) => {
       const updated = new Set(current)
@@ -58,18 +67,19 @@ function AdversarySelector({
       aria-labelledby="adversary-title"
       className="rounded-2xl border border-white/10 bg-[#17211b]/90 p-5 shadow-2xl shadow-black/10 sm:p-7"
     >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 id="adversary-title" className="text-xl font-semibold">
             Random adversary
           </h2>
-          <p className="mt-1 text-sm text-[#aeb9ad]">
-            Exclude any you don&apos;t want, then draw from the rest.
-          </p>
         </div>
-        <p className="text-sm text-[#aeb9ad]">
-          Sorted by level 6 difficulty
-        </p>
+        <button
+          type="button"
+          onClick={() => setAllIncluded(excludedAdversaryIds.size > 0)}
+          className="min-h-9 self-start rounded-lg border border-white/10 px-3 text-xs font-medium text-[#c5cec2] transition hover:border-emerald-200/30 hover:text-emerald-100 focus-visible:outline-emerald-300 sm:self-auto"
+        >
+          {excludedAdversaryIds.size === 0 ? 'Unselect all' : 'Select all'}
+        </button>
       </div>
 
       <fieldset className="mt-5">
@@ -135,27 +145,22 @@ function AdversarySelector({
         {selectedAdversary && (
           <article
             aria-labelledby="selected-adversary-name"
-            className="rounded-xl border border-emerald-200/15 bg-[#101814]/70 p-5"
+            className="flex flex-col items-center gap-3 rounded-xl border border-emerald-200/15 bg-[#101814]/70 p-5 text-center sm:flex-row sm:justify-between sm:text-left"
           >
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300/80">
-              Your adversary
-            </p>
-            <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h3
-                  id="selected-adversary-name"
-                  className="text-xl font-semibold text-[#f2f4ed]"
-                >
-                  {selectedAdversary.name}
-                </h3>
-                <p className="mt-1 text-sm text-[#b8c2b7]">
-                  {selectedAdversary.expansion}
-                </p>
-              </div>
-              <p className="text-sm font-medium text-emerald-100">
-                Level 6 difficulty: {selectedAdversary.level6Difficulty}
+            <div>
+              <h3
+                id="selected-adversary-name"
+                className="text-xl font-semibold text-[#f2f4ed]"
+              >
+                {selectedAdversary.name}
+              </h3>
+              <p className="mt-1 text-sm text-[#b8c2b7]">
+                {selectedAdversary.expansion}
               </p>
             </div>
+            <span className="shrink-0 rounded-full border border-emerald-200/15 px-2.5 py-1 text-xs text-emerald-100">
+              Difficulty {selectedAdversary.level6Difficulty}
+            </span>
           </article>
         )}
       </div>

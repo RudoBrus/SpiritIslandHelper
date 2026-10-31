@@ -36,12 +36,12 @@ function App() {
   const [activeView, setActiveView] = useState<
     'picker' | 'axis' | 'general-tier-list'
   >('picker')
-  const [playerCount, setPlayerCount] = useState(1)
+  const [playerCount, setPlayerCount] = useState(2)
   const [availableComplexities, setAvailableComplexities] =
     useState<readonly SpiritComplexity[]>(complexities)
   const [playerComplexities, setPlayerComplexities] = useState<
     readonly (readonly SpiritComplexity[])[]
-  >([complexities])
+  >([complexities, complexities])
   const [selectedAdversary, setSelectedAdversary] =
     useState<Adversary | null>(null)
   const [showMatchupTiers, setShowMatchupTiers] = useState(false)
