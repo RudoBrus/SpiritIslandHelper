@@ -7,12 +7,12 @@ import {
   applyGlobalComplexityFilter,
   excludeFMatchups,
   rerollSpirit,
-  randomizeSpirits,
+  randomizeSpiritsWithFixedChoices,
 } from './features/selector/randomizeSpirits'
 import MatchupAxis from './features/matchups/MatchupAxis'
 import GeneralTierList from './features/tierList/GeneralTierList'
 import { tierListItems } from './features/tierList/tierListData'
-import type { SpiritAspect, SpiritComplexity } from './types/spirit'
+import type { SpiritComplexity } from './types/spirit'
 
 const complexities: readonly SpiritComplexity[] = [
   'Low',
@@ -25,12 +25,9 @@ const playerOptions = Array.from({ length: 6 }, (_, index) => index + 1)
 const tierListItemsById = new Map(
   tierListItems.map((item) => [item.id, item]),
 )
-
-const complexityModifierLabels: Record<SpiritAspect['complexityModifier'], string> = {
-  '+': 'Increases complexity',
-  '=': 'No complexity change',
-  '−': 'Decreases complexity',
-}
+const sortedSpirits = [...spirits].sort((first, second) =>
+  first.name.localeCompare(second.name),
+)
 
 function App() {
   const [activeView, setActiveView] = useState<
@@ -42,6 +39,9 @@ function App() {
   const [playerComplexities, setPlayerComplexities] = useState<
     readonly (readonly SpiritComplexity[])[]
   >([complexities, complexities])
+  const [playerSpiritChoices, setPlayerSpiritChoices] = useState<
+    readonly (string | null)[]
+  >([null, null])
   const [selectedAdversary, setSelectedAdversary] =
     useState<Adversary | null>(null)
   const [showMatchupTiers, setShowMatchupTiers] = useState(false)
@@ -68,15 +68,29 @@ function App() {
         (_, index) => current[index] ?? complexities,
       ),
     )
+    setPlayerSpiritChoices((current) =>
+      Array.from({ length: count }, (_, index) => current[index] ?? null),
+    )
     setResults(null)
     setError(null)
   }
 
   function toggleAvailableComplexity(complexity: SpiritComplexity) {
-    setAvailableComplexities((current) =>
-      current.includes(complexity)
-        ? current.filter((item) => item !== complexity)
-        : [...current, complexity],
+    const updated = availableComplexities.includes(complexity)
+      ? availableComplexities.filter((item) => item !== complexity)
+      : [...availableComplexities, complexity]
+    setAvailableComplexities(updated)
+    setPlayerSpiritChoices((choices) =>
+      choices.map((spiritId, index) => {
+        const spirit = spirits.find((candidate) => candidate.id === spiritId)
+        const playerSelected = playerComplexities[index] ?? []
+
+        return spirit &&
+          (!updated.includes(spirit.complexity) ||
+            !playerSelected.includes(spirit.complexity))
+          ? null
+          : spiritId
+      }),
     )
     setError(null)
   }
@@ -85,31 +99,71 @@ function App() {
     playerIndex: number,
     complexity: SpiritComplexity,
   ) {
-    setPlayerComplexities((current) =>
-      current.map((selected, index) => {
-        if (index !== playerIndex) {
-          return selected
+    const updated = playerComplexities.map((selected, index) => {
+      if (index !== playerIndex) {
+        return selected
+      }
+
+      return selected.includes(complexity)
+        ? selected.filter((item) => item !== complexity)
+        : [...selected, complexity]
+    })
+    setPlayerComplexities(updated)
+    const selectedForPlayer = updated[playerIndex] ?? []
+    setPlayerSpiritChoices((choices) =>
+      choices.map((spiritId, index) => {
+        if (index !== playerIndex || !spiritId) {
+          return spiritId
         }
 
-        return selected.includes(complexity)
-          ? selected.filter((item) => item !== complexity)
-          : [...selected, complexity]
+        const spirit = spirits.find((candidate) => candidate.id === spiritId)
+
+        return spirit &&
+          (!selectedForPlayer.includes(spirit.complexity) ||
+            !availableComplexities.includes(spirit.complexity))
+          ? null
+          : spiritId
       }),
     )
     setError(null)
   }
 
+  function choosePlayerSpirit(playerIndex: number, spiritId: string) {
+    setPlayerSpiritChoices((current) =>
+      Array.from({ length: playerCount }, (_, index) =>
+        index === playerIndex ? spiritId || null : current[index] ?? null,
+      ),
+    )
+    setError(null)
+  }
+
   function generateSelection() {
+    const fixedSpiritChoices = playerSpiritChoices
+      .slice(0, playerCount)
+      .map((spiritId) =>
+        spiritId ? spirits.find((spirit) => spirit.id === spiritId) ?? null : null,
+      )
+    const chosenSpiritIds = fixedSpiritChoices.flatMap((spirit) =>
+      spirit ? [spirit.id] : [],
+    )
+
+    if (new Set(chosenSpiritIds).size !== chosenSpiritIds.length) {
+      setResults(null)
+      setError('Each player must choose a different spirit.')
+      return
+    }
+
     const eligibleSpirits = excludeFMatchups(
       spirits,
       selectedAdversary?.id ?? null,
     )
-    const selection = randomizeSpirits(
+    const selection = randomizeSpiritsWithFixedChoices(
       eligibleSpirits,
       applyGlobalComplexityFilter(
         playerComplexities.slice(0, playerCount),
         availableComplexities,
       ),
+      fixedSpiritChoices,
     )
 
     if (!selection) {
@@ -323,7 +377,30 @@ function App() {
                 <legend className="px-1 text-sm font-semibold text-[#e2e8de]">
                   Player {index + 1}
                 </legend>
-                <div className="mt-2 grid grid-cols-2 gap-2">
+                <label className="mt-2 block text-sm text-[#c5cec2]">
+                  Spirit (optional)
+                  <select
+                    value={playerSpiritChoices[index] ?? ''}
+                    onChange={(event) =>
+                      choosePlayerSpirit(index, event.target.value)
+                    }
+                    className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#17211b] px-2.5 text-sm text-white focus-visible:outline-emerald-300"
+                  >
+                    <option value="">Random</option>
+                    {sortedSpirits
+                      .filter(
+                        (spirit) =>
+                          selected.includes(spirit.complexity) &&
+                          availableComplexities.includes(spirit.complexity),
+                      )
+                      .map((spirit) => (
+                        <option key={spirit.id} value={spirit.id}>
+                          {spirit.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <div className="mt-3 grid grid-cols-2 gap-2">
                   {complexities.map((complexity) => {
                     const inputId = `player-${index + 1}-${complexity
                       .toLowerCase()
@@ -435,6 +512,8 @@ function App() {
                     const poorMatchup =
                       matchupTier?.startsWith('D') ||
                       matchupTier?.startsWith('F')
+                    const isFixedChoice =
+                      playerSpiritChoices[playerNumber - 1] === spirit.id
 
                     return (
                       <li
@@ -445,14 +524,14 @@ function App() {
                           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300/80">
                             Player {playerNumber}
                           </p>
-                          <button
+                          {!isFixedChoice && <button
                             type="button"
                             onClick={() => rerollPlayer(playerNumber)}
                             aria-label={`Reroll spirit for Player ${playerNumber}`}
                             className="min-h-9 rounded-lg border border-emerald-200/20 px-3 text-sm font-semibold text-emerald-200 transition hover:border-emerald-200/40 hover:bg-emerald-200/10 focus-visible:outline-emerald-300"
                           >
                             Reroll
-                          </button>
+                          </button>}
                         </div>
                         {selectedArtwork && (
                           <img
@@ -520,6 +599,11 @@ function App() {
                               {spirit.aspects.map((aspect) => (
                                 <option key={aspect.id} value={aspect.id}>
                                   {aspect.name}
+                                  {aspect.complexityModifier === '+'
+                                    ? ' (more complex)'
+                                    : aspect.complexityModifier === '−'
+                                      ? ' (less complex)'
+                                      : ''}
                                   {showMatchupTiers && selectedAdversary &&
                                     ` — Tier ${getMatchupTier(
                                       aspect.id,
@@ -528,13 +612,6 @@ function App() {
                                 </option>
                               ))}
                             </select>
-                            {selectedAspect && (
-                              <p className="mt-2 text-sm text-[#aeb9ad]">
-                                {complexityModifierLabels[
-                                  selectedAspect.complexityModifier
-                                ]}
-                              </p>
-                            )}
                           </div>
                         )}
                       </li>

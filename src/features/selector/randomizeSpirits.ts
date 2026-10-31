@@ -30,6 +30,42 @@ export function randomizeSpirits(
   playerComplexities: readonly (readonly SpiritComplexity[])[],
   random: () => number = Math.random,
 ): readonly Spirit[] | null {
+  return randomizeSpiritsWithFixedChoices(
+    spirits,
+    playerComplexities,
+    [],
+    random,
+  )
+}
+
+export function randomizeSpiritsWithFixedChoices(
+  spirits: readonly Spirit[],
+  playerComplexities: readonly (readonly SpiritComplexity[])[],
+  fixedSpirits: readonly (Spirit | null)[],
+  random: () => number = Math.random,
+): readonly Spirit[] | null {
+  const assignments: (Spirit | undefined)[] = Array.from({
+    length: playerComplexities.length,
+  })
+  const usedSpiritIds = new Set<string>()
+  const randomPlayerIndices: number[] = []
+
+  for (let index = 0; index < playerComplexities.length; index += 1) {
+    const fixedSpirit = fixedSpirits[index]
+
+    if (fixedSpirit == null) {
+      randomPlayerIndices.push(index)
+      continue
+    }
+
+    if (usedSpiritIds.has(fixedSpirit.id)) {
+      return null
+    }
+
+    assignments[index] = fixedSpirit
+    usedSpiritIds.add(fixedSpirit.id)
+  }
+
   const candidates = playerComplexities.map((complexities) =>
     shuffle(
       spirits.filter((spirit) => complexities.includes(spirit.complexity)),
@@ -37,18 +73,18 @@ export function randomizeSpirits(
     ),
   )
 
-  if (candidates.some((playerCandidates) => playerCandidates.length === 0)) {
+  if (
+    randomPlayerIndices.some(
+      (playerIndex) =>
+        !candidates[playerIndex]!.some(
+          (spirit) => !usedSpiritIds.has(spirit.id),
+        ),
+    )
+  ) {
     return null
   }
 
-  const playerOrder = shuffle(
-    playerComplexities.map((_, index) => index),
-    random,
-  )
-  const assignments: (Spirit | undefined)[] = Array.from({
-    length: playerComplexities.length,
-  })
-  const usedSpiritIds = new Set<string>()
+  const playerOrder = shuffle(randomPlayerIndices, random)
 
   function assignPlayers(remainingPlayers: readonly number[]): boolean {
     if (remainingPlayers.length === 0) {

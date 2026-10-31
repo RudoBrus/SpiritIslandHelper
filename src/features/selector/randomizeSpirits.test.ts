@@ -6,6 +6,7 @@ import {
   excludeFMatchups,
   rerollSpirit,
   randomizeSpirits,
+  randomizeSpiritsWithFixedChoices,
 } from './randomizeSpirits'
 
 const allComplexities: readonly SpiritComplexity[] = [
@@ -87,6 +88,51 @@ describe('randomizeSpirits', () => {
 
     expect(results).toHaveLength(2)
     expect(new Set(results?.map((spirit) => spirit.id)).size).toBe(2)
+  })
+
+  it('keeps a manually selected spirit while randomizing the remaining players', () => {
+    const fixedSpirit = spirits.find(
+      (spirit) => spirit.id === 'fractured-days-split-the-sky',
+    )!
+    const results = randomizeSpiritsWithFixedChoices(
+      spirits.filter((spirit) => spirit.complexity === 'Low'),
+      [['Low'], ['Low']],
+      [fixedSpirit, null],
+      () => 0,
+    )
+
+    expect(results?.[0]).toBe(fixedSpirit)
+    expect(results?.[1]?.complexity).toBe('Low')
+    expect(results?.[1]?.id).not.toBe(fixedSpirit.id)
+  })
+
+  it('rejects duplicate manually selected spirits', () => {
+    const fixedSpirit = spirits[0]!
+
+    expect(
+      randomizeSpiritsWithFixedChoices(
+        spirits,
+        [allComplexities, allComplexities],
+        [fixedSpirit, fixedSpirit],
+        () => 0,
+      ),
+    ).toBeNull()
+  })
+
+  it('rejects a fixed choice if the remaining random players cannot get distinct spirits', () => {
+    const fixedSpirit = spirits.find(
+      (spirit) => spirit.complexity === 'Low',
+    )!
+    const onlyLowSpirit = [fixedSpirit]
+
+    expect(
+      randomizeSpiritsWithFixedChoices(
+        onlyLowSpirit,
+        [['Low'], ['Low']],
+        [fixedSpirit, null],
+        () => 0,
+      ),
+    ).toBeNull()
   })
 
   it('rerolls to an eligible spirit without choosing anyone else’s spirit', () => {
