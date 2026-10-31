@@ -10,6 +10,7 @@ import {
   randomizeSpirits,
 } from './features/selector/randomizeSpirits'
 import MatchupAxis from './features/matchups/MatchupAxis'
+import GeneralTierList from './features/tierList/GeneralTierList'
 import type { SpiritAspect, SpiritComplexity } from './types/spirit'
 
 const complexities: readonly SpiritComplexity[] = [
@@ -28,7 +29,9 @@ const complexityModifierLabels: Record<SpiritAspect['complexityModifier'], strin
 }
 
 function App() {
-  const [activeView, setActiveView] = useState<'picker' | 'axis'>('picker')
+  const [activeView, setActiveView] = useState<
+    'picker' | 'axis' | 'general-tier-list'
+  >('picker')
   const [playerCount, setPlayerCount] = useState(1)
   const [availableComplexities, setAvailableComplexities] =
     useState<readonly SpiritComplexity[]>(complexities)
@@ -194,31 +197,49 @@ function App() {
         <div
           role="group"
           aria-label="Choose a view"
-          className="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-[#17211b]/80 p-1.5 sm:w-fit"
+          className="grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-[#17211b]/80 p-1.5 sm:w-fit"
         >
           <button
             type="button"
             aria-pressed={activeView === 'picker'}
             onClick={() => setActiveView('picker')}
-            className={`min-h-11 rounded-lg px-4 text-sm font-semibold transition focus-visible:outline-emerald-300 ${
+            aria-label="Spirit picker"
+            className={`min-h-11 min-w-0 rounded-lg px-1 text-xs font-semibold transition focus-visible:outline-emerald-300 sm:px-4 sm:text-sm ${
               activeView === 'picker'
                 ? 'bg-emerald-300 text-[#102016]'
                 : 'text-[#c5cec2] hover:bg-white/5'
             }`}
           >
-            Spirit picker
+            <span className="sm:hidden">Picker</span>
+            <span className="hidden sm:inline">Spirit picker</span>
           </button>
           <button
             type="button"
             aria-pressed={activeView === 'axis'}
             onClick={() => setActiveView('axis')}
-            className={`min-h-11 rounded-lg px-4 text-sm font-semibold transition focus-visible:outline-emerald-300 ${
+            aria-label="Matchup axis"
+            className={`min-h-11 min-w-0 rounded-lg px-1 text-xs font-semibold transition focus-visible:outline-emerald-300 sm:px-4 sm:text-sm ${
               activeView === 'axis'
                 ? 'bg-emerald-300 text-[#102016]'
                 : 'text-[#c5cec2] hover:bg-white/5'
             }`}
           >
-            Matchup axis
+            <span className="sm:hidden">Matchups</span>
+            <span className="hidden sm:inline">Matchup axis</span>
+          </button>
+          <button
+            type="button"
+            aria-pressed={activeView === 'general-tier-list'}
+            onClick={() => setActiveView('general-tier-list')}
+            aria-label="General spirit tier list"
+            className={`min-h-11 min-w-0 rounded-lg px-1 text-xs font-semibold transition focus-visible:outline-emerald-300 sm:px-4 sm:text-sm ${
+              activeView === 'general-tier-list'
+                ? 'bg-emerald-300 text-[#102016]'
+                : 'text-[#c5cec2] hover:bg-white/5'
+            }`}
+          >
+            <span className="sm:hidden">Tiers</span>
+            <span className="hidden sm:inline">General tiers</span>
           </button>
         </div>
 
@@ -517,6 +538,10 @@ function App() {
 
         <div className={activeView === 'axis' ? '' : 'hidden'}>
           <MatchupAxis />
+        </div>
+
+        <div className={activeView === 'general-tier-list' ? '' : 'hidden'}>
+          <GeneralTierList />
         </div>
 
       </main>
