@@ -1,4 +1,5 @@
 import type { Spirit, SpiritComplexity } from '../../types/spirit'
+import { getMatchupTier } from '../../data/matchups'
 
 export function applyGlobalComplexityFilter(
   playerComplexities: readonly (readonly SpiritComplexity[])[],
@@ -8,6 +9,19 @@ export function applyGlobalComplexityFilter(
     complexities.filter((complexity) =>
       availableComplexities.includes(complexity),
     ),
+  )
+}
+
+export function excludeFMatchups(
+  spirits: readonly Spirit[],
+  adversaryId: string | null,
+): readonly Spirit[] {
+  if (!adversaryId) {
+    return spirits
+  }
+
+  return spirits.filter(
+    (spirit) => !getMatchupTier(spirit.id, adversaryId)?.startsWith('F'),
   )
 }
 

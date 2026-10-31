@@ -3,6 +3,7 @@ import { spirits } from '../../data/spirits'
 import type { SpiritComplexity } from '../../types/spirit'
 import {
   applyGlobalComplexityFilter,
+  excludeFMatchups,
   rerollSpirit,
   randomizeSpirits,
 } from './randomizeSpirits'
@@ -25,6 +26,24 @@ describe('randomizeSpirits', () => {
       ['Moderate'],
       ['Moderate'],
     ])
+  })
+
+  it('excludes F-tier spirits for the selected adversary', () => {
+    const candidates = excludeFMatchups(spirits, 'russia')
+
+    expect(candidates.some((spirit) => spirit.id === 'river-sunshine')).toBe(
+      false,
+    )
+    expect(candidates.every((spirit) => spirit.id !== 'fathomless-mud-of-the-swamp')).toBe(
+      true,
+    )
+    expect(candidates.some((spirit) => spirit.id === 'river-surges-in-sunlight')).toBe(
+      true,
+    )
+  })
+
+  it('keeps all spirits eligible when no adversary is selected', () => {
+    expect(excludeFMatchups(spirits, null)).toBe(spirits)
   })
 
   it('selects one distinct eligible spirit for every player', () => {

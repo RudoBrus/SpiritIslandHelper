@@ -5,6 +5,7 @@ import { spirits } from './data/spirits'
 import AdversarySelector from './features/selector/AdversarySelector'
 import {
   applyGlobalComplexityFilter,
+  excludeFMatchups,
   rerollSpirit,
   randomizeSpirits,
 } from './features/selector/randomizeSpirits'
@@ -36,6 +37,7 @@ function App() {
   >([complexities])
   const [selectedAdversary, setSelectedAdversary] =
     useState<Adversary | null>(null)
+  const [showMatchupTiers, setShowMatchupTiers] = useState(false)
   const [results, setResults] = useState<
     | readonly {
         playerNumber: number
@@ -91,8 +93,12 @@ function App() {
   }
 
   function generateSelection() {
-    const selection = randomizeSpirits(
+    const eligibleSpirits = excludeFMatchups(
       spirits,
+      selectedAdversary?.id ?? null,
+    )
+    const selection = randomizeSpirits(
+      eligibleSpirits,
       applyGlobalComplexityFilter(
         playerComplexities.slice(0, playerCount),
         availableComplexities,
@@ -102,7 +108,9 @@ function App() {
     if (!selection) {
       setResults(null)
       setError(
-        'These complexity choices cannot give every player a different spirit. Enable more complexity levels or allow more levels for each player.',
+        selectedAdversary
+          ? 'These complexity choices cannot give every player a different spirit without an F-tier matchup against the selected adversary. Enable more complexity levels or allow more levels for each player.'
+          : 'These complexity choices cannot give every player a different spirit. Enable more complexity levels or allow more levels for each player.',
       )
       return
     }
@@ -143,14 +151,16 @@ function App() {
         availableComplexities,
       )[0] ?? []
     const replacement = rerollSpirit(
-      spirits,
+      excludeFMatchups(spirits, selectedAdversary?.id ?? null),
       availableForPlayer,
       new Set(results.map((result) => result.spirit.id)),
     )
 
     if (!replacement) {
       setError(
-        `No different eligible spirit is available for Player ${playerNumber} without changing anyone else's spirit. Adjust the complexity choices or pick spirits again for everyone.`,
+        selectedAdversary
+          ? `No different eligible spirit without an F-tier matchup is available for Player ${playerNumber} without changing anyone else's spirit. Adjust the complexity choices or pick spirits again for everyone.`
+          : `No different eligible spirit is available for Player ${playerNumber} without changing anyone else's spirit. Adjust the complexity choices or pick spirits again for everyone.`,
       )
       return
     }
@@ -349,17 +359,29 @@ function App() {
 
           {results && (
             <section aria-labelledby="results-title">
-              <div className="mb-4 flex items-baseline justify-between gap-3">
+              <div className="mb-4 flex items-center justify-between gap-3">
                 <h2 id="results-title" className="text-xl font-semibold">
                   Your spirits
                 </h2>
                 {selectedAdversary && (
-                  <p className="text-sm text-[#aeb9ad]">
-                    Matchup tier vs. {selectedAdversary.name}
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <p className="text-right text-sm text-[#aeb9ad]">
+                      vs. {selectedAdversary.name}
+                    </p>
+                    <button
+                      type="button"
+                      aria-pressed={showMatchupTiers}
+                      onClick={() =>
+                        setShowMatchupTiers((current) => !current)
+                      }
+                      className="min-h-9 shrink-0 rounded-lg border border-white/10 px-2.5 text-xs font-medium text-[#b8c2b7] transition hover:border-emerald-200/30 hover:text-emerald-100 focus-visible:outline-emerald-300"
+                    >
+                      {showMatchupTiers ? 'Hide tiers' : 'Show tiers'}
+                    </button>
+                  </div>
                 )}
               </div>
-              {selectedAdversary && (
+              {selectedAdversary && showMatchupTiers && (
                 <p className="mb-4 text-sm leading-6 text-[#aeb9ad]">
                   Tiers are for level 6 adversaries in 4+ spirit games without
                   outside support. An asterisk marks a matchup that may be
@@ -384,6 +406,9 @@ function App() {
                       selectedAspect?.id ?? spirit.id,
                       selectedAdversary?.id ?? '',
                     )
+                    const poorMatchup =
+                      matchupTier?.startsWith('D') ||
+                      matchupTier?.startsWith('F')
 
                     return (
                       <li
@@ -406,12 +431,26 @@ function App() {
                         <h3 className="mt-2 text-lg font-semibold leading-snug text-[#f2f4ed]">
                           {spirit.name}
                         </h3>
+                        {poorMatchup && (
+                          <p
+                            className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                              matchupTier?.startsWith('F')
+                                ? 'border-rose-300/20 bg-rose-950/50 text-rose-100'
+                                : 'border-amber-200/20 bg-amber-950/40 text-amber-100'
+                            }`}
+                            aria-label={`Poor matchup: tier ${matchupTier}`}
+                          >
+                            {matchupTier?.startsWith('F')
+                              ? 'F matchup'
+                              : 'D matchup'}
+                          </p>
+                        )}
                         <dl className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#b8c2b7]">
                           <div className="flex gap-1.5">
                             <dt className="text-[#829084]">Complexity</dt>
                             <dd>{spirit.complexity}</dd>
                           </div>
-                          {matchupTier && (
+                          {showMatchupTiers && matchupTier && (
                             <div className="flex gap-1.5">
                               <dt className="text-[#829084]">Matchup tier</dt>
                               <dd aria-label={`Tier ${matchupTier}`}>
@@ -441,7 +480,7 @@ function App() {
                             >
                               <option value="">
                                 Base spirit
-                                {selectedAdversary &&
+                                {showMatchupTiers && selectedAdversary &&
                                   ` — Tier ${getMatchupTier(
                                     spirit.id,
                                     selectedAdversary.id,
@@ -450,7 +489,7 @@ function App() {
                               {spirit.aspects.map((aspect) => (
                                 <option key={aspect.id} value={aspect.id}>
                                   {aspect.name}
-                                  {selectedAdversary &&
+                                  {showMatchupTiers && selectedAdversary &&
                                     ` — Tier ${getMatchupTier(
                                       aspect.id,
                                       selectedAdversary.id,
