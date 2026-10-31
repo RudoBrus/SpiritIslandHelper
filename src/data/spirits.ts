@@ -224,6 +224,18 @@ const spiritMetadata = [
     complexity: 'Moderate',
     expansion: 'Branch and Claw',
   },
+  {
+    id: 'poisoned-petals-renew-the-earth',
+    name: 'Poisoned Petals Renew the Earth',
+    complexity: 'High',
+    expansion: 'Apocrypha',
+  },
+  {
+    id: 'covets-gleaming-shards-of-earth',
+    name: 'Covets Gleaming Shards of Earth',
+    complexity: 'Very High',
+    expansion: 'Apocrypha',
+  },
 ] satisfies readonly Omit<
   Spirit,
   'artworkUrl' | 'artworkPageUrl' | 'aspects'
@@ -239,6 +251,9 @@ function getArtworkPageUrl(name: string): string {
 export const spirits: readonly Spirit[] = spiritMetadata.map((spirit) => ({
   ...spirit,
   artworkUrl: null,
-  artworkPageUrl: getArtworkPageUrl(spirit.name),
+  artworkPageUrl:
+    spirit.expansion === 'Apocrypha'
+      ? null
+      : getArtworkPageUrl(spirit.name),
   aspects: aspectsBySpiritId[spirit.id] ?? [],
 }))

@@ -11,7 +11,7 @@ export type Spirit = {
   readonly id: string
   readonly name: string
   readonly artworkUrl: string | null
-  readonly artworkPageUrl: string
+  readonly artworkPageUrl: string | null
   readonly complexity: SpiritComplexity
   readonly expansion: string
   readonly aspects: readonly SpiritAspect[]

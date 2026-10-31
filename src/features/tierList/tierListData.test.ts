@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
@@ -10,7 +10,7 @@ import {
 
 describe('general tier list data', () => {
   it('includes a local image for every spirit and aspect', () => {
-    expect(tierListItems).toHaveLength(68)
+    expect(tierListItems).toHaveLength(70)
     const missingImages = tierListItems
       .filter(
         (item) =>
@@ -25,6 +25,25 @@ describe('general tier list data', () => {
       .map((item) => `${item.id}: ${item.imageUrl}`)
 
     expect(missingImages).toEqual([])
+
+    for (const id of [
+      'poisoned-petals-renew-the-earth',
+      'covets-gleaming-shards-of-earth',
+    ]) {
+      const image = tierListItems.find((item) => item.id === id)
+      if (!image) {
+        throw new Error(`Missing tier list image data for ${id}`)
+      }
+
+      const imagePath = resolve(
+        process.cwd(),
+        'public',
+        image.imageUrl.split('/').slice(-3).join('/'),
+      )
+      const png = readFileSync(imagePath)
+      expect(png.readUInt32BE(16)).toBe(300)
+      expect(png.readUInt32BE(20)).toBe(194)
+    }
   })
 
   it('seeds the aspect placements from the supplied tier list', () => {
@@ -87,6 +106,8 @@ describe('general tier list data', () => {
       'fathomless-mud-of-the-swamp',
       'river-haven',
       'keeper-spreading-hostility',
+      'poisoned-petals-renew-the-earth',
+      'covets-gleaming-shards-of-earth',
     ])
     expect(defaultTierPlacements.C.slice(0, 6)).toEqual([
       'serpent-locus',

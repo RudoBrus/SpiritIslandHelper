@@ -5,9 +5,9 @@ import { adversaryOrder, getMatchupTier, matchupRatings } from './matchups'
 import { spirits } from './spirits'
 
 describe('spirit data', () => {
-  it('contains all 37 spirits from the wiki with unique identifiers', () => {
-    expect(spirits).toHaveLength(37)
-    expect(new Set(spirits.map((spirit) => spirit.id)).size).toBe(37)
+  it('contains all spirits with unique identifiers', () => {
+    expect(spirits).toHaveLength(39)
+    expect(new Set(spirits.map((spirit) => spirit.id)).size).toBe(39)
   })
 
   it('includes expansion, complexity, and a wiki page for each spirit', () => {
@@ -16,15 +16,36 @@ describe('spirit data', () => {
         (spirit) =>
           spirit.expansion.length > 0 &&
           spirit.complexity.length > 0 &&
-          spirit.artworkPageUrl.startsWith(
-            'https://spiritislandwiki.com/index.php/File:',
-          ),
+          (spirit.expansion === 'Apocrypha'
+            ? spirit.artworkPageUrl === null
+            : spirit.artworkPageUrl?.startsWith(
+                'https://spiritislandwiki.com/index.php/File:',
+              ) === true),
       ),
     ).toBe(true)
   })
 
   it('does not bundle copyrighted spirit artwork', () => {
     expect(spirits.every((spirit) => spirit.artworkUrl === null)).toBe(true)
+  })
+
+  it('includes the Apocrypha spirits with their specified complexities', () => {
+    expect(
+      spirits
+        .filter((spirit) => spirit.expansion === 'Apocrypha')
+        .map(({ id, name, complexity }) => ({ id, name, complexity })),
+    ).toEqual([
+      {
+        id: 'poisoned-petals-renew-the-earth',
+        name: 'Poisoned Petals Renew the Earth',
+        complexity: 'High',
+      },
+      {
+        id: 'covets-gleaming-shards-of-earth',
+        name: 'Covets Gleaming Shards of Earth',
+        complexity: 'Very High',
+      },
+    ])
   })
 
   it('includes all 31 aspects with valid parent spirits and unique identifiers', () => {
@@ -60,25 +81,41 @@ describe('spirit data', () => {
     ])
   })
 
-  it('includes a matchup tier for every spirit, aspect, and adversary', () => {
+  it('includes matchup tiers where ratings are available', () => {
     const expectedEntityIds = spirits.flatMap((spirit) => [
       spirit.id,
       ...spirit.aspects.map((aspect) => aspect.id),
     ])
+    const ratedEntityIds = expectedEntityIds.filter(
+      (entityId) =>
+        !spirits.some(
+          (spirit) =>
+            spirit.expansion === 'Apocrypha' && spirit.id === entityId,
+        ),
+    )
 
     expect(Object.keys(matchupRatings).sort()).toEqual(
-      expectedEntityIds.sort(),
+      ratedEntityIds.sort(),
     )
     expect(adversaryOrder).toHaveLength(adversaries.length)
     expect(new Set(adversaryOrder)).toEqual(
       new Set(adversaries.map((adversary) => adversary.id)),
     )
     expect(
-      expectedEntityIds.every((entityId) =>
+      ratedEntityIds.every((entityId) =>
         adversaryOrder.every(
           (adversaryId) => getMatchupTier(entityId, adversaryId) !== null,
         ),
       ),
+    ).toBe(true)
+    expect(
+      expectedEntityIds
+        .filter((entityId) => !ratedEntityIds.includes(entityId))
+        .every((entityId) =>
+          adversaryOrder.every(
+            (adversaryId) => getMatchupTier(entityId, adversaryId) === null,
+          ),
+        ),
     ).toBe(true)
     expect(
       Object.values(matchupRatings).every(
