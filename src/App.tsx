@@ -11,6 +11,7 @@ import {
 } from './features/selector/randomizeSpirits'
 import MatchupAxis from './features/matchups/MatchupAxis'
 import GeneralTierList from './features/tierList/GeneralTierList'
+import { tierListItems } from './features/tierList/tierListData'
 import type { SpiritAspect, SpiritComplexity } from './types/spirit'
 
 const complexities: readonly SpiritComplexity[] = [
@@ -21,6 +22,9 @@ const complexities: readonly SpiritComplexity[] = [
 ]
 
 const playerOptions = Array.from({ length: 6 }, (_, index) => index + 1)
+const tierListItemsById = new Map(
+  tierListItems.map((item) => [item.id, item]),
+)
 
 const complexityModifierLabels: Record<SpiritAspect['complexityModifier'], string> = {
   '+': 'Increases complexity',
@@ -423,6 +427,7 @@ function App() {
                     const selectedAspect = spirit.aspects.find(
                       (aspect) => aspect.id === selectedAspectId,
                     )
+                    const selectedArtwork = tierListItemsById.get(spirit.id)
                     const matchupTier = getMatchupTier(
                       selectedAspect?.id ?? spirit.id,
                       selectedAdversary?.id ?? '',
@@ -449,6 +454,15 @@ function App() {
                             Reroll
                           </button>
                         </div>
+                        {selectedArtwork && (
+                          <img
+                            src={selectedArtwork.imageUrl}
+                            alt={`${selectedArtwork.name} artwork`}
+                            width={300}
+                            height={194}
+                            className="mt-4 aspect-[300/194] w-full rounded-lg border border-white/10 object-cover"
+                          />
+                        )}
                         <h3 className="mt-2 text-lg font-semibold leading-snug text-[#f2f4ed]">
                           {spirit.name}
                         </h3>
@@ -467,10 +481,6 @@ function App() {
                           </p>
                         )}
                         <dl className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#b8c2b7]">
-                          <div className="flex gap-1.5">
-                            <dt className="text-[#829084]">Complexity</dt>
-                            <dd>{spirit.complexity}</dd>
-                          </div>
                           {showMatchupTiers && matchupTier && (
                             <div className="flex gap-1.5">
                               <dt className="text-[#829084]">Matchup tier</dt>
