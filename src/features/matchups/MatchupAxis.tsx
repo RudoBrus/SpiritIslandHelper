@@ -221,18 +221,18 @@ function MatchupAxis() {
               {renderSortHeader(
                 'spirit',
                 'Spirit',
-                'sticky left-0 z-10 min-w-56 border-b border-white/10 bg-[#101814] px-3 py-3',
+                'sticky left-0 z-10 w-28 min-w-28 max-w-28 border-b border-white/10 bg-[#101814] px-2 py-3 sm:w-56 sm:min-w-56 sm:max-w-none sm:px-3',
               )}
               {renderSortHeader(
                 'complexity',
                 'Complexity',
-                'min-w-28 border-b border-white/10 px-3 py-3',
+                'min-w-24 border-b border-white/10 px-2 py-3 sm:min-w-28 sm:px-3',
               )}
               {visibleAdversaries.map((adversary) =>
                 renderSortHeader(
                     adversary.id,
                     adversary.name,
-                    'min-w-28 border-b border-white/10 px-3 py-3',
+                    'min-w-20 border-b border-white/10 px-2 py-3 sm:min-w-28 sm:px-3',
                     adversary.id,
                   ),
               )}
@@ -246,7 +246,7 @@ function MatchupAxis() {
               >
                 <th
                   scope="row"
-                  className="sticky left-0 z-10 bg-[#17211b] px-3 py-2.5 font-medium text-[#e2e8de]"
+                  className="sticky left-0 z-10 w-28 min-w-28 max-w-28 break-words bg-[#17211b] px-2 py-2.5 font-medium text-[#e2e8de] sm:w-56 sm:min-w-56 sm:max-w-none sm:px-3"
                 >
                   <span className="block">{row.spiritName}</span>
                   {row.name && (
@@ -264,7 +264,7 @@ function MatchupAxis() {
                   return (
                     <td
                       key={adversary.id}
-                      className="px-3 py-2 text-center"
+                      className="px-1.5 py-2 text-center sm:px-3"
                       title={
                         tier
                           ? `Tier ${tier}${tier.endsWith('*') ? ' — asterisk marker' : ''}`
@@ -301,6 +301,10 @@ function MatchupAxis() {
           </tbody>
         </table>
       </div>
+
+      <p className="mt-2 text-xs text-[#95a294] sm:hidden">
+        Swipe horizontally to see more adversaries.
+      </p>
 
       <p className="mt-4 text-xs leading-5 text-[#95a294]">
         F, D, C, B, A, and S run from weakest to strongest. An asterisk marks a
