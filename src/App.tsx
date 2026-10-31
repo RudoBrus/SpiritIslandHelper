@@ -10,6 +10,7 @@ import {
   randomizeSpiritsWithFixedChoices,
 } from './features/selector/randomizeSpirits'
 import MatchupAxis from './features/matchups/MatchupAxis'
+import { matchupTierColors } from './features/matchups/matchupTierStyles'
 import GeneralTierList from './features/tierList/GeneralTierList'
 import { tierListItems } from './features/tierList/tierListData'
 import type { SpiritComplexity } from './types/spirit'
@@ -483,21 +484,6 @@ function App() {
                   </div>
                 )}
               </div>
-              {selectedAdversary && showMatchupTiers && (
-                <p className="mb-4 text-sm leading-6 text-[#aeb9ad]">
-                  Tiers are for level 6 adversaries in 4+ spirit games without
-                  outside support. An asterisk marks a matchup that may be
-                  harder to achieve at its listed tier.{' '}
-                  <a
-                    href="https://www.reddit.com/r/spiritisland/comments/1bqer7k/reds_matchup_axis_5_star_system/"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-emerald-200 underline decoration-emerald-200/40 underline-offset-2 hover:text-emerald-100"
-                  >
-                    Source and rating guide
-                  </a>
-                </p>
-              )}
               <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {results.map(
                   ({ playerNumber, spirit, selectedAspectId }) => {
@@ -509,9 +495,6 @@ function App() {
                       selectedAspect?.id ?? spirit.id,
                       selectedAdversary?.id ?? '',
                     )
-                    const poorMatchup =
-                      matchupTier?.startsWith('D') ||
-                      matchupTier?.startsWith('F')
                     const isFixedChoice =
                       playerSpiritChoices[playerNumber - 1] === spirit.id
 
@@ -524,14 +507,26 @@ function App() {
                           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300/80">
                             Player {playerNumber}
                           </p>
-                          {!isFixedChoice && <button
-                            type="button"
-                            onClick={() => rerollPlayer(playerNumber)}
-                            aria-label={`Reroll spirit for Player ${playerNumber}`}
-                            className="min-h-9 rounded-lg border border-emerald-200/20 px-3 text-sm font-semibold text-emerald-200 transition hover:border-emerald-200/40 hover:bg-emerald-200/10 focus-visible:outline-emerald-300"
-                          >
-                            Reroll
-                          </button>}
+                          <div className="flex shrink-0 items-center gap-2">
+                            {showMatchupTiers && matchupTier && (
+                              <span
+                                className={`inline-flex justify-center rounded-md border px-2 py-1 text-xs font-semibold ${matchupTierColors[matchupTier.charAt(0)]}`}
+                                aria-label={`Matchup tier ${matchupTier}`}
+                              >
+                                {matchupTier} matchup
+                              </span>
+                            )}
+                            {!isFixedChoice && (
+                              <button
+                                type="button"
+                                onClick={() => rerollPlayer(playerNumber)}
+                                aria-label={`Reroll spirit for Player ${playerNumber}`}
+                                className="min-h-9 rounded-lg border border-emerald-200/20 px-3 text-sm font-semibold text-emerald-200 transition hover:border-emerald-200/40 hover:bg-emerald-200/10 focus-visible:outline-emerald-300"
+                              >
+                                Reroll
+                              </button>
+                            )}
+                          </div>
                         </div>
                         {selectedArtwork && (
                           <img
@@ -545,30 +540,6 @@ function App() {
                         <h3 className="mt-2 text-lg font-semibold leading-snug text-[#f2f4ed]">
                           {spirit.name}
                         </h3>
-                        {poorMatchup && (
-                          <p
-                            className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${
-                              matchupTier?.startsWith('F')
-                                ? 'border-rose-300/20 bg-rose-950/50 text-rose-100'
-                                : 'border-amber-200/20 bg-amber-950/40 text-amber-100'
-                            }`}
-                            aria-label={`Poor matchup: tier ${matchupTier}`}
-                          >
-                            {matchupTier?.startsWith('F')
-                              ? 'F matchup'
-                              : 'D matchup'}
-                          </p>
-                        )}
-                        <dl className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#b8c2b7]">
-                          {showMatchupTiers && matchupTier && (
-                            <div className="flex gap-1.5">
-                              <dt className="text-[#829084]">Matchup tier</dt>
-                              <dd aria-label={`Tier ${matchupTier}`}>
-                                {matchupTier}
-                              </dd>
-                            </div>
-                          )}
-                        </dl>
                         {spirit.aspects.length > 0 && (
                           <div className="mt-5">
                             <label

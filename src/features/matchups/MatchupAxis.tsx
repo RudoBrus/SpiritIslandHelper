@@ -3,6 +3,7 @@ import { adversaries } from '../../data/adversaries'
 import { adversaryOrder, getMatchupTier } from '../../data/matchups'
 import { spirits } from '../../data/spirits'
 import type { SpiritComplexity } from '../../types/spirit'
+import { matchupTierColors } from './matchupTierStyles'
 import {
   filterMatchupRows,
   sortMatchupRows,
@@ -20,15 +21,6 @@ const complexities: readonly SpiritComplexity[] = [
 
 function isSpiritComplexity(value: string): value is SpiritComplexity {
   return complexities.some((complexity) => complexity === value)
-}
-
-const tierColors: Record<string, string> = {
-  F: 'border-rose-300/20 bg-rose-950/60 text-rose-100',
-  D: 'border-orange-300/20 bg-orange-950/50 text-orange-100',
-  C: 'border-amber-200/20 bg-amber-950/40 text-amber-100',
-  B: 'border-sky-200/20 bg-sky-950/50 text-sky-100',
-  A: 'border-emerald-200/20 bg-emerald-950/50 text-emerald-100',
-  S: 'border-cyan-200/20 bg-cyan-950/60 text-cyan-100',
 }
 
 const orderedAdversaries = adversaryOrder.map((id) => {
@@ -272,7 +264,7 @@ function MatchupAxis() {
                       {tier ? (
                         <span
                           aria-label={`Tier ${tier}`}
-                          className={`inline-flex min-w-9 justify-center rounded-md border px-2 py-1 font-semibold ${tierColors[tier.charAt(0)]}`}
+                          className={`inline-flex min-w-9 justify-center rounded-md border px-2 py-1 font-semibold ${matchupTierColors[tier.charAt(0)]}`}
                         >
                           {tier}
                         </span>
