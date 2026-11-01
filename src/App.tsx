@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import type { Adversary } from './types/adversary'
 import { getMatchupTier } from './data/matchups'
 import { spirits } from './data/spirits'
@@ -13,6 +13,13 @@ import MatchupAxis from './features/matchups/MatchupAxis'
 import { matchupTierColors } from './features/matchups/matchupTierStyles'
 import GeneralTierList from './features/tierList/GeneralTierList'
 import { tierListItems } from './features/tierList/tierListData'
+import {
+  emptyProfileHistory,
+  readProfileHistory,
+  type ProfileHistoryData,
+  type SavedGame,
+  type SavedGamePlayer,
+} from './features/profiles/profileHistory'
 import type { SpiritComplexity } from './types/spirit'
 
 const complexities: readonly SpiritComplexity[] = [
@@ -29,10 +36,11 @@ const tierListItemsById = new Map(
 const sortedSpirits = [...spirits].sort((first, second) =>
   first.name.localeCompare(second.name),
 )
+const profileHistoryStorageKey = 'spirit-island-helper-profile-history-v1'
 
 function App() {
   const [activeView, setActiveView] = useState<
-    'picker' | 'axis' | 'general-tier-list'
+    'picker' | 'axis' | 'general-tier-list' | 'profiles'
   >('picker')
   const [playerCount, setPlayerCount] = useState(2)
   const [availableComplexities, setAvailableComplexities] =
@@ -43,6 +51,37 @@ function App() {
   const [playerSpiritChoices, setPlayerSpiritChoices] = useState<
     readonly (string | null)[]
   >([null, null])
+  const [playerProfileChoices, setPlayerProfileChoices] = useState<
+    readonly (string | null)[]
+  >([null, null])
+  const [profileName, setProfileName] = useState('')
+  const [profileHistoryState, setProfileHistoryState] = useState<{
+    readonly data: ProfileHistoryData
+    readonly error: string | null
+  }>(() => {
+    try {
+      const saved = readProfileHistory(
+        window.localStorage.getItem(profileHistoryStorageKey),
+      )
+
+      return saved
+        ? { data: saved, error: null }
+        : {
+            data: emptyProfileHistory,
+            error: 'Could not load saved profiles because their data is invalid.',
+          }
+    } catch (loadError) {
+      return {
+        data: emptyProfileHistory,
+        error: `Could not load saved profiles: ${
+          loadError instanceof Error ? loadError.message : String(loadError)
+        }`,
+      }
+    }
+  })
+  const [profileHistoryMessage, setProfileHistoryMessage] = useState<
+    string | null
+  >(null)
   const [selectedAdversary, setSelectedAdversary] =
     useState<Adversary | null>(null)
   const [showMatchupTiers, setShowMatchupTiers] = useState(false)
@@ -55,6 +94,137 @@ function App() {
     | null
   >(null)
   const [error, setError] = useState<string | null>(null)
+
+  function persistProfileHistory(data: ProfileHistoryData) {
+    try {
+      window.localStorage.setItem(
+        profileHistoryStorageKey,
+        JSON.stringify({ version: 1, ...data }),
+      )
+      setProfileHistoryState({ data, error: null })
+      setProfileHistoryMessage(null)
+      return true
+    } catch (saveError) {
+      setProfileHistoryMessage(
+        `Could not save profiles or game history: ${
+          saveError instanceof Error ? saveError.message : String(saveError)
+        }`,
+      )
+      return false
+    }
+  }
+
+  function addProfile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const name = profileName.trim()
+
+    if (!name) {
+      setProfileHistoryMessage('Enter a profile name.')
+      return
+    }
+
+    if (
+      profileHistoryState.data.profiles.some(
+        (profile) => profile.name.toLocaleLowerCase() === name.toLocaleLowerCase(),
+      )
+    ) {
+      setProfileHistoryMessage('A profile with that name already exists.')
+      return
+    }
+
+    const profile = { id: crypto.randomUUID(), name }
+
+    if (
+      persistProfileHistory({
+        ...profileHistoryState.data,
+        profiles: [...profileHistoryState.data.profiles, profile],
+      })
+    ) {
+      setProfileName('')
+    }
+  }
+
+  function removeProfile(profileId: string) {
+    persistProfileHistory({
+      ...profileHistoryState.data,
+      profiles: profileHistoryState.data.profiles.filter(
+        (profile) => profile.id !== profileId,
+      ),
+    })
+    setPlayerProfileChoices((current) =>
+      current.map((choice) => (choice === profileId ? null : choice)),
+    )
+  }
+
+  function choosePlayerProfile(playerIndex: number, profileId: string) {
+    setPlayerProfileChoices((current) =>
+      Array.from({ length: playerCount }, (_, index) =>
+        index === playerIndex ? profileId || null : current[index] ?? null,
+      ),
+    )
+  }
+
+  function saveGame(outcome: SavedGame['outcome']) {
+    if (!selectedAdversary || !results) {
+      return
+    }
+
+    const players = results.map((result) => {
+      const profileId = playerProfileChoices[result.playerNumber - 1]
+      const profile = profileHistoryState.data.profiles.find(
+        (candidate) => candidate.id === profileId,
+      )
+      const aspect = result.spirit.aspects.find(
+        (candidate) => candidate.id === result.selectedAspectId,
+      )
+
+      return profile
+        ? {
+            profileId: profile.id,
+            profileName: profile.name,
+            spiritId: result.spirit.id,
+            spiritName: result.spirit.name,
+            aspectName: aspect?.name ?? null,
+          }
+        : null
+    })
+
+    const savedPlayers = players.filter(
+      (player): player is SavedGamePlayer => player !== null,
+    )
+
+    if (savedPlayers.length !== results.length) {
+      setProfileHistoryMessage(
+        'Choose a profile for each player before saving this game.',
+      )
+      return
+    }
+
+    if (new Set(savedPlayers.map((player) => player.profileId)).size !== savedPlayers.length) {
+      setProfileHistoryMessage(
+        'Choose a different profile for each player in this game.',
+      )
+      return
+    }
+
+    const game: SavedGame = {
+      id: crypto.randomUUID(),
+      playedAt: new Date().toISOString(),
+      outcome,
+      adversaryId: selectedAdversary.id,
+      adversaryName: selectedAdversary.name,
+      players: savedPlayers,
+    }
+
+    if (
+      persistProfileHistory({
+        ...profileHistoryState.data,
+        games: [game, ...profileHistoryState.data.games],
+      })
+    ) {
+      setProfileHistoryMessage('Game saved.')
+    }
+  }
 
   function changeAdversary(adversary: Adversary | null) {
     setSelectedAdversary(adversary)
@@ -70,6 +240,9 @@ function App() {
       ),
     )
     setPlayerSpiritChoices((current) =>
+      Array.from({ length: count }, (_, index) => current[index] ?? null),
+    )
+    setPlayerProfileChoices((current) =>
       Array.from({ length: count }, (_, index) => current[index] ?? null),
     )
     setResults(null)
@@ -241,6 +414,16 @@ function App() {
     setError(null)
   }
 
+  const assignedProfiles = playerProfileChoices.slice(0, playerCount)
+  const canSaveGame =
+    Boolean(results && selectedAdversary) &&
+    assignedProfiles.every((profileId) =>
+      profileHistoryState.data.profiles.some(
+        (profile) => profile.id === profileId,
+      ),
+    ) &&
+    new Set(assignedProfiles).size === playerCount
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#101814] text-[#f2f4ed]">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
@@ -256,7 +439,7 @@ function App() {
         <div
           role="group"
           aria-label="Choose a view"
-          className="grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-[#17211b]/80 p-1.5 sm:w-fit"
+          className="grid grid-cols-4 gap-2 rounded-xl border border-white/10 bg-[#17211b]/80 p-1.5 sm:w-fit"
         >
           <button
             type="button"
@@ -299,6 +482,20 @@ function App() {
           >
             <span className="sm:hidden">Tiers</span>
             <span className="hidden sm:inline">Tier list</span>
+          </button>
+          <button
+            type="button"
+            aria-pressed={activeView === 'profiles'}
+            onClick={() => setActiveView('profiles')}
+            aria-label="Profiles and history"
+            className={`min-h-11 min-w-0 rounded-lg px-1 text-xs font-semibold transition focus-visible:outline-emerald-300 sm:px-4 sm:text-sm ${
+              activeView === 'profiles'
+                ? 'bg-emerald-300 text-[#102016]'
+                : 'text-[#c5cec2] hover:bg-white/5'
+            }`}
+          >
+            <span className="sm:hidden">Profiles</span>
+            <span className="hidden sm:inline">Profiles &amp; history</span>
           </button>
         </div>
 
@@ -370,72 +567,105 @@ function App() {
           </fieldset>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {playerComplexities.slice(0, playerCount).map((selected, index) => (
-              <fieldset
-                key={index}
-                className="rounded-xl border border-white/10 bg-[#101814]/70 p-4"
-              >
-                <legend className="px-1 text-sm font-semibold text-[#e2e8de]">
-                  Player {index + 1}
-                </legend>
-                <label className="mt-2 block text-sm text-[#c5cec2]">
-                  Spirit (optional)
-                  <select
-                    value={playerSpiritChoices[index] ?? ''}
-                    onChange={(event) =>
-                      choosePlayerSpirit(index, event.target.value)
-                    }
-                    className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#17211b] px-2.5 text-sm text-white focus-visible:outline-emerald-300"
-                  >
-                    <option value="">Random</option>
-                    {sortedSpirits
-                      .filter(
-                        (spirit) =>
-                          selected.includes(spirit.complexity) &&
-                          availableComplexities.includes(spirit.complexity),
-                      )
-                      .map((spirit) => (
-                        <option key={spirit.id} value={spirit.id}>
-                          {spirit.name}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  {complexities.map((complexity) => {
-                    const inputId = `player-${index + 1}-${complexity
-                      .toLowerCase()
-                      .replace(' ', '-')}`
+            {playerComplexities.slice(0, playerCount).map((selected, index) => {
+              const profileId = playerProfileChoices[index]
 
-                    return (
-                      <label
-                        key={complexity}
-                        htmlFor={inputId}
-                        className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-white/5 px-2.5 text-sm text-[#c5cec2] transition hover:border-emerald-200/20 hover:bg-white/5"
-                      >
-                        <input
-                          id={inputId}
-                          type="checkbox"
-                          checked={selected.includes(complexity)}
-                          disabled={!availableComplexities.includes(complexity)}
-                          onChange={() => toggleComplexity(index, complexity)}
-                          className="size-4 accent-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
-                        />
-                        <span
-                          className={
-                            availableComplexities.includes(complexity)
-                              ? ''
-                              : 'opacity-50'
+              return (
+                <fieldset
+                  key={index}
+                  className="rounded-xl border border-white/10 bg-[#101814]/70 p-4"
+                >
+                  <legend className="px-1">
+                    <label
+                      className="sr-only"
+                      htmlFor={`player-profile-${index + 1}`}
+                    >
+                      Player {index + 1} profile
+                    </label>
+                    <select
+                      id={`player-profile-${index + 1}`}
+                      value={profileId ?? ''}
+                      onChange={(event) =>
+                        choosePlayerProfile(index, event.target.value)
+                      }
+                      className="max-w-full rounded-md border border-transparent bg-transparent px-1 py-0.5 text-sm font-semibold text-[#e2e8de] focus:border-emerald-200/30 focus:bg-[#17211b] focus-visible:outline-emerald-300"
+                    >
+                      <option value="">Player {index + 1}</option>
+                      {profileHistoryState.data.profiles.map((profile) => (
+                        <option
+                          key={profile.id}
+                          value={profile.id}
+                          disabled={
+                            profile.id !== profileId &&
+                            assignedProfiles.includes(profile.id)
                           }
                         >
-                          {complexity}
-                        </span>
-                      </label>
-                    )
-                  })}
-                </div>
-              </fieldset>
-            ))}
+                          {profile.name}
+                        </option>
+                      ))}
+                    </select>
+                  </legend>
+                  <label className="mt-2 block text-sm text-[#c5cec2]">
+                    Spirit (optional)
+                    <select
+                      value={playerSpiritChoices[index] ?? ''}
+                      onChange={(event) =>
+                        choosePlayerSpirit(index, event.target.value)
+                      }
+                      className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#17211b] px-2.5 text-sm text-white focus-visible:outline-emerald-300"
+                    >
+                      <option value="">Random</option>
+                      {sortedSpirits
+                        .filter(
+                          (spirit) =>
+                            selected.includes(spirit.complexity) &&
+                            availableComplexities.includes(spirit.complexity),
+                        )
+                        .map((spirit) => (
+                          <option key={spirit.id} value={spirit.id}>
+                            {spirit.name}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {complexities.map((complexity) => {
+                      const inputId = `player-${index + 1}-${complexity
+                        .toLowerCase()
+                        .replace(' ', '-')}`
+
+                      return (
+                        <label
+                          key={complexity}
+                          htmlFor={inputId}
+                          className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-white/5 px-2.5 text-sm text-[#c5cec2] transition hover:border-emerald-200/20 hover:bg-white/5"
+                        >
+                          <input
+                            id={inputId}
+                            type="checkbox"
+                            checked={selected.includes(complexity)}
+                            disabled={!availableComplexities.includes(complexity)}
+                            onChange={() =>
+                              toggleComplexity(index, complexity)
+                            }
+                            className="size-4 accent-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
+                          />
+                          <span
+                            className={
+                              availableComplexities.includes(complexity)
+                                ? ''
+                                : 'opacity-50'
+                            }
+                          >
+                            {complexity}
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </fieldset>
+              )
+            })}
           </div>
 
           <button
@@ -593,6 +823,41 @@ function App() {
                   },
                 )}
               </ol>
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <span className="text-sm font-medium text-[#d9e1d5]">
+                  Save game:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => saveGame('won')}
+                  disabled={!canSaveGame}
+                  className="min-h-10 rounded-lg border border-emerald-200/20 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-200/10 focus-visible:outline-emerald-300 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Won
+                </button>
+                <button
+                  type="button"
+                  onClick={() => saveGame('lost')}
+                  disabled={!canSaveGame}
+                  className="min-h-10 rounded-lg border border-rose-200/20 px-4 text-sm font-semibold text-rose-100 transition hover:bg-rose-200/10 focus-visible:outline-rose-300 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Lost
+                </button>
+                {!canSaveGame && (
+                  <p className="basis-full text-xs text-[#95a294]">
+                    Choose an adversary and a different profile for each player
+                    to save this game.
+                  </p>
+                )}
+                {profileHistoryMessage && (
+                  <p
+                    role="status"
+                    className="basis-full text-sm text-amber-100"
+                  >
+                    {profileHistoryMessage}
+                  </p>
+                )}
+              </div>
             </section>
           )}
         </div>
@@ -610,6 +875,125 @@ function App() {
         <div className={activeView === 'general-tier-list' ? '' : 'hidden'}>
           <GeneralTierList />
         </div>
+
+        <section
+          aria-labelledby="profiles-title"
+          className={
+            activeView === 'profiles'
+              ? 'rounded-2xl border border-white/10 bg-[#17211b]/90 p-5 shadow-2xl shadow-black/10 sm:p-7'
+              : 'hidden'
+          }
+        >
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="profiles-title" className="text-xl font-semibold">
+              Profiles and game history
+            </h2>
+            <p className="text-sm text-[#95a294]">
+              {profileHistoryState.data.profiles.length} profiles ·{' '}
+              {profileHistoryState.data.games.length} games
+            </p>
+          </div>
+
+          <form
+            onSubmit={addProfile}
+            className="mt-5 flex flex-col gap-2 sm:flex-row"
+          >
+            <label className="sr-only" htmlFor="new-profile-name">
+              New profile name
+            </label>
+            <input
+              id="new-profile-name"
+              value={profileName}
+              onChange={(event) => setProfileName(event.target.value)}
+              placeholder="Profile name"
+              className="min-h-10 min-w-0 flex-1 rounded-lg border border-white/10 bg-[#101814] px-3 text-sm text-white placeholder:text-[#829084] focus-visible:outline-emerald-300"
+            />
+            <button
+              type="submit"
+              className="min-h-10 rounded-lg border border-emerald-200/20 px-3 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-200/10 focus-visible:outline-emerald-300"
+            >
+              Add profile
+            </button>
+          </form>
+
+          {profileHistoryState.data.profiles.length > 0 ? (
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {profileHistoryState.data.profiles.map((profile) => (
+                <li
+                  key={profile.id}
+                  className="flex items-center gap-2 rounded-full border border-white/10 bg-[#101814] py-1 pl-3 pr-1 text-sm text-[#d9e1d5]"
+                >
+                  {profile.name}
+                  <button
+                    type="button"
+                    onClick={() => removeProfile(profile.id)}
+                    aria-label={`Remove profile ${profile.name}`}
+                    className="size-7 rounded-full text-[#aeb9ad] hover:bg-white/10 hover:text-white focus-visible:outline-emerald-300"
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-sm text-[#95a294]">
+              No profiles yet. Add one above to assign players and save games.
+            </p>
+          )}
+
+          <div className="mt-8 border-t border-white/10 pt-5">
+            <h3 className="text-lg font-semibold text-[#e2e8de]">Saved games</h3>
+            {profileHistoryState.data.games.length > 0 ? (
+              <ol className="mt-3 max-h-96 space-y-2 overflow-y-auto">
+                {profileHistoryState.data.games.map((game) => (
+                  <li
+                    key={game.id}
+                    className="rounded-lg border border-white/10 bg-[#101814]/70 p-3 text-sm"
+                  >
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <p className="font-semibold text-[#e2e8de]">
+                        {game.adversaryName}
+                      </p>
+                      <p className="text-xs text-[#95a294]">
+                        {new Date(game.playedAt).toLocaleString()}
+                      </p>
+                      <span
+                        className={
+                          game.outcome === 'won'
+                            ? 'text-emerald-200'
+                            : 'text-rose-200'
+                        }
+                      >
+                        {game.outcome === 'won' ? 'Won' : 'Lost'}
+                      </span>
+                    </div>
+                    <ul className="mt-2 space-y-1 text-[#b8c2b7]">
+                      {game.players.map((player) => (
+                        <li key={`${game.id}-${player.profileId}`}>
+                          {player.profileName}: {player.spiritName}
+                          {player.aspectName ? ` (${player.aspectName})` : ''}
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="mt-2 text-sm text-[#95a294]">
+                Games you save from the spirit picker will appear here.
+              </p>
+            )}
+          </div>
+
+          {(profileHistoryState.error || profileHistoryMessage) && (
+            <p
+              role="alert"
+              className="mt-4 rounded-lg border border-amber-200/20 bg-amber-950/30 px-3 py-2 text-sm text-amber-100"
+            >
+              {profileHistoryMessage ?? profileHistoryState.error}
+            </p>
+          )}
+        </section>
 
       </main>
     </div>
