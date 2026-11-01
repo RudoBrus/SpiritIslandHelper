@@ -225,14 +225,6 @@ function MatchupAxis() {
             adversaries.
           </p>
         </div>
-        <a
-          href="https://www.reddit.com/r/spiritisland/comments/1bqer7k/reds_matchup_axis_5_star_system/"
-          target="_blank"
-          rel="noreferrer"
-          className="text-sm text-emerald-200 underline decoration-emerald-200/40 underline-offset-2 hover:text-emerald-100"
-        >
-          Source and rating guide
-        </a>
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-6 sm:grid-cols-3">
@@ -434,14 +426,18 @@ function MatchupAxis() {
         </div>
       </div>
 
-      <p className="mt-2 text-xs text-[#95a294] sm:hidden">
-        Swipe horizontally to see more adversaries.
-      </p>
-
       <p className="mt-4 text-xs leading-5 text-[#95a294]">
-        F, D, C, B, A, and S run from weakest to strongest. An asterisk marks a
-        matchup that may be harder to achieve at its listed tier. Aspect rows
-        use the parent spirit&apos;s complexity.
+        F, D, C, B, A, and S run from weakest to strongest. An asterisk marks
+        matchups where it can be difficult to play the spirit at the level
+        needed to reach that tier, so it may feel weaker in practice.{' '}
+        <a
+          href="https://www.reddit.com/r/spiritisland/comments/1bqer7k/reds_matchup_axis_5_star_system/"
+          target="_blank"
+          rel="noreferrer"
+          className="text-emerald-200 underline decoration-emerald-200/40 underline-offset-2 hover:text-emerald-100"
+        >
+          Source and rating guide
+        </a>
       </p>
     </section>
   )
