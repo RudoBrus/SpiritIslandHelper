@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import type { Adversary } from './types/adversary'
+import { adversaries } from './data/adversaries'
 import { getMatchupTier } from './data/matchups'
 import { spirits } from './data/spirits'
 import AdversarySelector from './features/selector/AdversarySelector'
@@ -82,6 +83,7 @@ function App() {
   const [profileHistoryMessage, setProfileHistoryMessage] = useState<
     string | null
   >(null)
+  const [editingGame, setEditingGame] = useState<SavedGame | null>(null)
   const [selectedAdversary, setSelectedAdversary] =
     useState<Adversary | null>(null)
   const [showMatchupTiers, setShowMatchupTiers] = useState(false)
@@ -223,6 +225,82 @@ function App() {
       })
     ) {
       setProfileHistoryMessage('Game saved.')
+    }
+  }
+
+  function startEditingGame(game: SavedGame) {
+    setEditingGame({
+      ...game,
+      players: game.players.map((player) => ({ ...player })),
+    })
+    setProfileHistoryMessage(null)
+  }
+
+  function updateEditingGamePlayer(
+    playerIndex: number,
+    updates: Partial<SavedGamePlayer>,
+  ) {
+    setEditingGame((current) =>
+      current
+        ? {
+            ...current,
+            players: current.players.map((player, index) =>
+              index === playerIndex ? { ...player, ...updates } : player,
+            ),
+          }
+        : null,
+    )
+  }
+
+  function saveEditedGame() {
+    if (!editingGame) {
+      return
+    }
+
+    if (
+      new Set(editingGame.players.map((player) => player.profileId)).size !==
+      editingGame.players.length
+    ) {
+      setProfileHistoryMessage(
+        'Choose a different profile for each player in this game.',
+      )
+      return
+    }
+
+    if (
+      persistProfileHistory({
+        ...profileHistoryState.data,
+        games: profileHistoryState.data.games.map((game) =>
+          game.id === editingGame.id ? editingGame : game,
+        ),
+      })
+    ) {
+      setEditingGame(null)
+      setProfileHistoryMessage('Game updated.')
+    }
+  }
+
+  function removeSavedGame(game: SavedGame) {
+    if (
+      !window.confirm(
+        `Remove the saved game against ${game.adversaryName}?`,
+      )
+    ) {
+      return
+    }
+
+    if (
+      persistProfileHistory({
+        ...profileHistoryState.data,
+        games: profileHistoryState.data.games.filter(
+          (savedGame) => savedGame.id !== game.id,
+        ),
+      })
+    ) {
+      if (editingGame?.id === game.id) {
+        setEditingGame(null)
+      }
+      setProfileHistoryMessage('Game removed.')
     }
   }
 
@@ -945,38 +1023,291 @@ function App() {
             <h3 className="text-lg font-semibold text-[#e2e8de]">Saved games</h3>
             {profileHistoryState.data.games.length > 0 ? (
               <ol className="mt-3 max-h-96 space-y-2 overflow-y-auto">
-                {profileHistoryState.data.games.map((game) => (
-                  <li
-                    key={game.id}
-                    className="rounded-lg border border-white/10 bg-[#101814]/70 p-3 text-sm"
-                  >
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <p className="font-semibold text-[#e2e8de]">
-                        {game.adversaryName}
-                      </p>
-                      <p className="text-xs text-[#95a294]">
-                        {new Date(game.playedAt).toLocaleString()}
-                      </p>
-                      <span
-                        className={
-                          game.outcome === 'won'
-                            ? 'text-emerald-200'
-                            : 'text-rose-200'
-                        }
-                      >
-                        {game.outcome === 'won' ? 'Won' : 'Lost'}
-                      </span>
-                    </div>
-                    <ul className="mt-2 space-y-1 text-[#b8c2b7]">
-                      {game.players.map((player) => (
-                        <li key={`${game.id}-${player.profileId}`}>
-                          {player.profileName}: {player.spiritName}
-                          {player.aspectName ? ` (${player.aspectName})` : ''}
-                        </li>
-                      ))}
-                    </ul>
-                  </li>
-                ))}
+                {profileHistoryState.data.games.map((game) => {
+                  const isEditing = editingGame?.id === game.id
+                  const gameBeingEdited = isEditing ? editingGame : null
+                  const adversaryStillAvailable = adversaries.some(
+                    (adversary) => adversary.id === gameBeingEdited?.adversaryId,
+                  )
+
+                  return (
+                    <li
+                      key={game.id}
+                      className="rounded-lg border border-white/10 bg-[#101814]/70 p-3 text-sm"
+                    >
+                      {gameBeingEdited ? (
+                        <div className="space-y-4">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="font-semibold text-[#e2e8de]">
+                              Edit saved game
+                            </p>
+                            <p className="text-xs text-[#95a294]">
+                              {new Date(game.playedAt).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <label className="text-sm text-[#c5cec2]">
+                              Adversary
+                              <select
+                                value={gameBeingEdited.adversaryId}
+                                onChange={(event) => {
+                                  const adversary = adversaries.find(
+                                    (candidate) =>
+                                      candidate.id === event.target.value,
+                                  )
+                                  if (adversary) {
+                                    setEditingGame((current) =>
+                                      current
+                                        ? {
+                                            ...current,
+                                            adversaryId: adversary.id,
+                                            adversaryName: adversary.name,
+                                          }
+                                        : null,
+                                    )
+                                  }
+                                }}
+                                className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#17211b] px-2.5 text-sm text-white focus-visible:outline-emerald-300"
+                              >
+                                {!adversaryStillAvailable && (
+                                  <option value={gameBeingEdited.adversaryId}>
+                                    {gameBeingEdited.adversaryName}
+                                  </option>
+                                )}
+                                {adversaries.map((adversary) => (
+                                  <option
+                                    key={adversary.id}
+                                    value={adversary.id}
+                                  >
+                                    {adversary.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label className="text-sm text-[#c5cec2]">
+                              Result
+                              <select
+                                value={gameBeingEdited.outcome}
+                                onChange={(event) =>
+                                  setEditingGame((current) =>
+                                    current
+                                      ? {
+                                          ...current,
+                                          outcome:
+                                            event.target.value === 'won'
+                                              ? 'won'
+                                              : 'lost',
+                                        }
+                                      : null,
+                                  )
+                                }
+                                className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#17211b] px-2.5 text-sm text-white focus-visible:outline-emerald-300"
+                              >
+                                <option value="won">Won</option>
+                                <option value="lost">Lost</option>
+                              </select>
+                            </label>
+                          </div>
+                          <div className="space-y-3">
+                            {gameBeingEdited.players.map((player, index) => {
+                              const spirit = spirits.find(
+                                (candidate) => candidate.id === player.spiritId,
+                              )
+                              const selectedProfileExists =
+                                profileHistoryState.data.profiles.some(
+                                  (profile) => profile.id === player.profileId,
+                                )
+
+                              return (
+                                <fieldset
+                                  key={`${gameBeingEdited.id}-${player.profileId}-${index}`}
+                                  className="grid gap-3 rounded-lg border border-white/10 p-3 sm:grid-cols-3"
+                                >
+                                  <legend className="px-1 text-xs font-medium text-[#95a294]">
+                                    Player {index + 1}
+                                  </legend>
+                                  <label className="text-sm text-[#c5cec2]">
+                                    Profile
+                                    <select
+                                      value={player.profileId}
+                                      onChange={(event) => {
+                                        const profile =
+                                          profileHistoryState.data.profiles.find(
+                                            (candidate) =>
+                                              candidate.id === event.target.value,
+                                          )
+                                        if (profile) {
+                                          updateEditingGamePlayer(index, {
+                                            profileId: profile.id,
+                                            profileName: profile.name,
+                                          })
+                                        }
+                                      }}
+                                      className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#17211b] px-2.5 text-sm text-white focus-visible:outline-emerald-300"
+                                    >
+                                      {!selectedProfileExists && (
+                                        <option value={player.profileId}>
+                                          {player.profileName} (removed profile)
+                                        </option>
+                                      )}
+                                      {profileHistoryState.data.profiles.map(
+                                        (profile) => (
+                                          <option
+                                            key={profile.id}
+                                            value={profile.id}
+                                            disabled={gameBeingEdited.players.some(
+                                              (other, otherIndex) =>
+                                                otherIndex !== index &&
+                                                other.profileId === profile.id,
+                                            )}
+                                          >
+                                            {profile.name}
+                                          </option>
+                                        ),
+                                      )}
+                                    </select>
+                                  </label>
+                                  <label className="text-sm text-[#c5cec2]">
+                                    Spirit
+                                    <select
+                                      value={player.spiritId}
+                                      onChange={(event) => {
+                                        const nextSpirit = spirits.find(
+                                          (candidate) =>
+                                            candidate.id === event.target.value,
+                                        )
+                                        if (nextSpirit) {
+                                          updateEditingGamePlayer(index, {
+                                            spiritId: nextSpirit.id,
+                                            spiritName: nextSpirit.name,
+                                            aspectName: null,
+                                          })
+                                        }
+                                      }}
+                                      className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#17211b] px-2.5 text-sm text-white focus-visible:outline-emerald-300"
+                                    >
+                                      {!spirit && (
+                                        <option value={player.spiritId}>
+                                          {player.spiritName}
+                                        </option>
+                                      )}
+                                      {sortedSpirits.map((candidate) => (
+                                        <option
+                                          key={candidate.id}
+                                          value={candidate.id}
+                                        >
+                                          {candidate.name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+                                  <label className="text-sm text-[#c5cec2]">
+                                    Aspect
+                                    <select
+                                      value={player.aspectName ?? ''}
+                                      disabled={!spirit}
+                                      onChange={(event) =>
+                                        updateEditingGamePlayer(index, {
+                                          aspectName:
+                                            event.target.value || null,
+                                        })
+                                      }
+                                      className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#17211b] px-2.5 text-sm text-white focus-visible:outline-emerald-300 disabled:opacity-50"
+                                    >
+                                      <option value="">Base spirit</option>
+                                      {spirit?.aspects.map((aspect) => (
+                                        <option
+                                          key={aspect.id}
+                                          value={aspect.name}
+                                        >
+                                          {aspect.name}
+                                        </option>
+                                      ))}
+                                      {player.aspectName &&
+                                        !spirit?.aspects.some(
+                                          (aspect) =>
+                                            aspect.name === player.aspectName,
+                                        ) && (
+                                          <option value={player.aspectName}>
+                                            {player.aspectName}
+                                          </option>
+                                        )}
+                                    </select>
+                                  </label>
+                                </fieldset>
+                              )
+                            })}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={saveEditedGame}
+                              className="min-h-9 rounded-lg bg-emerald-300 px-3 text-sm font-semibold text-[#102016] hover:bg-emerald-200 focus-visible:outline-emerald-300"
+                            >
+                              Save changes
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingGame(null)
+                                setProfileHistoryMessage(null)
+                              }}
+                              className="min-h-9 rounded-lg border border-white/10 px-3 text-sm text-[#c5cec2] hover:bg-white/5 focus-visible:outline-emerald-300"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex flex-wrap items-baseline justify-between gap-2">
+                            <p className="font-semibold text-[#e2e8de]">
+                              {game.adversaryName}
+                            </p>
+                            <p className="text-xs text-[#95a294]">
+                              {new Date(game.playedAt).toLocaleString()}
+                            </p>
+                            <span
+                              className={
+                                game.outcome === 'won'
+                                  ? 'text-emerald-200'
+                                  : 'text-rose-200'
+                              }
+                            >
+                              {game.outcome === 'won' ? 'Won' : 'Lost'}
+                            </span>
+                          </div>
+                          <ul className="mt-2 space-y-1 text-[#b8c2b7]">
+                            {game.players.map((player) => (
+                              <li key={`${game.id}-${player.profileId}`}>
+                                {player.profileName}: {player.spiritName}
+                                {player.aspectName
+                                  ? ` (${player.aspectName})`
+                                  : ''}
+                              </li>
+                            ))}
+                          </ul>
+                          <div className="mt-3 flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => startEditingGame(game)}
+                              className="min-h-8 rounded-md border border-white/10 px-2.5 text-xs font-medium text-[#c5cec2] hover:bg-white/5 focus-visible:outline-emerald-300"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeSavedGame(game)}
+                              className="min-h-8 rounded-md border border-rose-200/20 px-2.5 text-xs font-medium text-rose-100 hover:bg-rose-200/10 focus-visible:outline-rose-300"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </li>
+                  )
+                })}
               </ol>
             ) : (
               <p className="mt-2 text-sm text-[#95a294]">
