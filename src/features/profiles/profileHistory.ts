@@ -1,6 +1,9 @@
+export type SpiritWeight = 0 | 0.5 | 1 | 2 | 4
+
 export type PlayerProfile = {
   readonly id: string
   readonly name: string
+  readonly spiritWeights?: Readonly<Record<string, SpiritWeight>>
 }
 
 export type SavedGamePlayer = {
@@ -61,7 +64,17 @@ function isProfile(value: unknown): value is PlayerProfile {
   return (
     isRecord(value) &&
     typeof value.id === 'string' &&
-    typeof value.name === 'string'
+    typeof value.name === 'string' &&
+    (value.spiritWeights === undefined ||
+      (isRecord(value.spiritWeights) &&
+        Object.values(value.spiritWeights).every(
+          (weight) =>
+            weight === 0 ||
+            weight === 0.5 ||
+            weight === 1 ||
+            weight === 2 ||
+            weight === 4,
+        )))
   )
 }
 

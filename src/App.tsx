@@ -21,6 +21,7 @@ import {
   type ProfileHistoryData,
   type SavedGame,
   type SavedGamePlayer,
+  type SpiritWeight,
 } from './features/profiles/profileHistory'
 import type { SpiritComplexity } from './types/spirit'
 
@@ -40,6 +41,16 @@ const sortedSpirits = [...spirits].sort((first, second) =>
 )
 const profileHistoryStorageKey = 'spirit-island-helper-profile-history-v1'
 const recentGamesToExclude = 3
+const spiritWeightOptions: readonly {
+  readonly value: SpiritWeight
+  readonly label: string
+}[] = [
+  { value: 0, label: 'Never (0×)' },
+  { value: 0.5, label: 'Less often (½×)' },
+  { value: 1, label: 'Normal (1×)' },
+  { value: 2, label: 'More often (2×)' },
+  { value: 4, label: 'Much more often (4×)' },
+]
 
 function App() {
   const [activeView, setActiveView] = useState<
@@ -58,6 +69,9 @@ function App() {
     readonly (string | null)[]
   >([null, null])
   const [profileName, setProfileName] = useState('')
+  const [profileSpiritSearch, setProfileSpiritSearch] = useState<
+    Readonly<Record<string, string>>
+  >({})
   const [profileHistoryState, setProfileHistoryState] = useState<{
     readonly data: ProfileHistoryData
     readonly error: string | null
@@ -136,7 +150,11 @@ function App() {
       return
     }
 
-    const profile = { id: crypto.randomUUID(), name }
+    const profile = {
+      id: crypto.randomUUID(),
+      name,
+      spiritWeights: {},
+    }
 
     if (
       persistProfileHistory({
@@ -158,6 +176,35 @@ function App() {
     setPlayerProfileChoices((current) =>
       current.map((choice) => (choice === profileId ? null : choice)),
     )
+  }
+
+  function updateProfileSpiritWeight(
+    profileId: string,
+    spiritId: string,
+    weight: SpiritWeight,
+  ) {
+    const profile = profileHistoryState.data.profiles.find(
+      (candidate) => candidate.id === profileId,
+    )
+    if (!profile) {
+      return
+    }
+
+    const spiritWeights = { ...profile.spiritWeights }
+    if (weight === 1) {
+      delete spiritWeights[spiritId]
+    } else {
+      spiritWeights[spiritId] = weight
+    }
+
+    persistProfileHistory({
+      ...profileHistoryState.data,
+      profiles: profileHistoryState.data.profiles.map((candidate) =>
+        candidate.id === profileId
+          ? { ...candidate, spiritWeights }
+          : candidate,
+      ),
+    })
   }
 
   function choosePlayerProfile(playerIndex: number, profileId: string) {
@@ -431,14 +478,21 @@ function App() {
       fixedSpiritChoices,
       Math.random,
       recentlyPlayedSpiritIds,
+      playerProfileChoices
+        .slice(0, playerCount)
+        .map((profileId) =>
+          profileHistoryState.data.profiles.find(
+            (profile) => profile.id === profileId,
+          )?.spiritWeights ?? {},
+        ),
     )
 
     if (!selection) {
       setResults(null)
       setError(
         selectedAdversary
-          ? 'These choices cannot give every player a different spirit while avoiding F-tier matchups and recently played spirits. Enable more complexity levels, allow more levels for each player, or change manual spirit choices.'
-          : 'These choices cannot give every player a different spirit while avoiding recently played spirits. Enable more complexity levels, allow more levels for each player, or change manual spirit choices.',
+          ? 'These choices cannot give every player a different spirit while avoiding F-tier matchups and recently played spirits while honoring profile weights. Enable more complexity levels, allow more levels for each player, adjust spirit weights, or change manual spirit choices.'
+          : 'These choices cannot give every player a different spirit while avoiding recently played spirits and honoring profile weights. Enable more complexity levels, allow more levels for each player, adjust spirit weights, or change manual spirit choices.',
       )
       return
     }
@@ -486,6 +540,10 @@ function App() {
           recentGamesToExclude,
         )
       : new Set<string>()
+    const spiritWeights =
+      profileHistoryState.data.profiles.find(
+        (profile) => profile.id === profileId,
+      )?.spiritWeights ?? {}
     const excludedSpiritIds = new Set([
       ...results.map((result) => result.spirit.id),
       ...recentlyPlayedSpiritIds,
@@ -494,14 +552,16 @@ function App() {
       excludeFMatchups(spirits, selectedAdversary?.id ?? null),
       availableForPlayer,
       excludedSpiritIds,
+      Math.random,
+      spiritWeights,
     )
 
     if (!replacement) {
       setError(
         profileId
           ? selectedAdversary
-            ? `No different eligible spirit outside this profile’s last 3 games and without an F-tier matchup is available for Player ${playerNumber} without changing anyone else's spirit. Adjust the complexity choices or pick spirits again for everyone.`
-            : `No different spirit outside this profile’s last 3 games is available for Player ${playerNumber} without changing anyone else's spirit. Adjust the complexity choices or pick spirits again for everyone.`
+            ? `No different eligible spirit outside this profile’s last 3 games, with a nonzero weight, and without an F-tier matchup is available for Player ${playerNumber} without changing anyone else's spirit. Adjust the complexity choices or spirit weights, or pick spirits again for everyone.`
+            : `No different spirit outside this profile’s last 3 games with a nonzero weight is available for Player ${playerNumber} without changing anyone else's spirit. Adjust the complexity choices or spirit weights, or pick spirits again for everyone.`
           : selectedAdversary
             ? `No different eligible spirit without an F-tier matchup is available for Player ${playerNumber} without changing anyone else's spirit. Adjust the complexity choices or pick spirits again for everyone.`
             : `No different eligible spirit is available for Player ${playerNumber} without changing anyone else's spirit. Adjust the complexity choices or pick spirits again for everyone.`,
@@ -1036,24 +1096,121 @@ function App() {
           </form>
 
           {profileHistoryState.data.profiles.length > 0 ? (
-            <ul className="mt-3 flex flex-wrap gap-2">
-              {profileHistoryState.data.profiles.map((profile) => (
-                <li
-                  key={profile.id}
-                  className="flex items-center gap-2 rounded-full border border-white/10 bg-[#101814] py-1 pl-3 pr-1 text-sm text-[#d9e1d5]"
-                >
-                  {profile.name}
-                  <button
-                    type="button"
-                    onClick={() => removeProfile(profile.id)}
-                    aria-label={`Remove profile ${profile.name}`}
-                    className="size-7 rounded-full text-[#aeb9ad] hover:bg-white/10 hover:text-white focus-visible:outline-emerald-300"
+            <div className="mt-4 space-y-2">
+              {profileHistoryState.data.profiles.map((profile) => {
+                const weights = profile.spiritWeights ?? {}
+                const adjustedWeightCount = Object.values(weights).filter(
+                  (weight) => weight !== 1,
+                ).length
+                const search = profileSpiritSearch[profile.id] ?? ''
+                const filteredSpirits = sortedSpirits.filter((spirit) =>
+                  spirit.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
+                )
+
+                return (
+                  <div
+                    key={profile.id}
+                    className="rounded-xl border border-white/10 bg-[#101814]/70 p-3"
                   >
-                    ×
-                  </button>
-                </li>
-              ))}
-            </ul>
+                    <div className="flex items-center gap-3">
+                      <details className="min-w-0 flex-1">
+                        <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 marker:hidden">
+                          <span className="font-medium text-[#e2e8de]">
+                            {profile.name}
+                          </span>
+                          <span className="text-xs text-[#95a294]">
+                            {adjustedWeightCount} adjusted · Normal for all
+                            others
+                          </span>
+                        </summary>
+                        <div className="mt-3 border-t border-white/10 pt-4">
+                          <p className="mb-3 text-sm text-[#95a294]">
+                            Set how often each spirit can be randomly picked.
+                            These settings save automatically; manual spirit
+                            choices are unaffected.
+                          </p>
+                          <label className="mb-3 block">
+                            <span className="sr-only">
+                              Search spirits for {profile.name}
+                            </span>
+                            <input
+                              type="search"
+                              value={search}
+                              onChange={(event) =>
+                                setProfileSpiritSearch((current) => ({
+                                  ...current,
+                                  [profile.id]: event.target.value,
+                                }))
+                              }
+                              placeholder="Search spirits"
+                              className="min-h-10 w-full rounded-lg border border-white/10 bg-[#17211b] px-3 text-sm text-white placeholder:text-[#829084] focus-visible:outline-emerald-300"
+                            />
+                          </label>
+                          <ul className="max-h-96 space-y-1 overflow-y-auto">
+                            {filteredSpirits.map((spirit) => {
+                              const weight = weights[spirit.id] ?? 1
+
+                              return (
+                                <li
+                                  key={spirit.id}
+                                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-white/5"
+                                >
+                                  <span className="truncate text-sm text-[#d9e1d5]">
+                                    {spirit.name}
+                                  </span>
+                                  <select
+                                    aria-label={`${spirit.name} weight for ${profile.name}`}
+                                    value={String(weight)}
+                                    onChange={(event) => {
+                                      const nextWeight =
+                                        spiritWeightOptions.find(
+                                          (option) =>
+                                            String(option.value) ===
+                                            event.target.value,
+                                        )?.value
+                                      if (nextWeight !== undefined) {
+                                        updateProfileSpiritWeight(
+                                          profile.id,
+                                          spirit.id,
+                                          nextWeight,
+                                        )
+                                      }
+                                    }}
+                                    className="min-h-9 max-w-44 rounded-lg border border-white/10 bg-[#17211b] px-2 text-xs text-white focus-visible:outline-emerald-300"
+                                  >
+                                    {spiritWeightOptions.map((option) => (
+                                      <option
+                                        key={option.value}
+                                        value={String(option.value)}
+                                      >
+                                        {option.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </li>
+                              )
+                            })}
+                            {filteredSpirits.length === 0 && (
+                              <li className="px-2 py-3 text-sm text-[#95a294]">
+                                No spirits match that search.
+                              </li>
+                            )}
+                          </ul>
+                        </div>
+                      </details>
+                      <button
+                        type="button"
+                        onClick={() => removeProfile(profile.id)}
+                        aria-label={`Remove profile ${profile.name}`}
+                        className="min-h-8 rounded-md border border-white/10 px-2.5 text-xs text-[#b8c2b7] hover:bg-white/5 focus-visible:outline-emerald-300"
+                      >
+                        Remove profile
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           ) : (
             <p className="mt-3 text-sm text-[#95a294]">
               No profiles yet. Add one above to assign players and save games.

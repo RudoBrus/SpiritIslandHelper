@@ -44,6 +44,7 @@ export function randomizeSpiritsWithFixedChoices(
   fixedSpirits: readonly (Spirit | null)[],
   random: () => number = Math.random,
   excludedSpiritIdsByPlayer: readonly ReadonlySet<string>[] = [],
+  spiritWeightsByPlayer: readonly Readonly<Record<string, number>>[] = [],
 ): readonly Spirit[] | null {
   const assignments: (Spirit | undefined)[] = Array.from({
     length: playerComplexities.length,
@@ -68,12 +69,14 @@ export function randomizeSpiritsWithFixedChoices(
   }
 
   const candidates = playerComplexities.map((complexities, index) =>
-    shuffle(
+    weightedShuffle(
       spirits.filter(
         (spirit) =>
           complexities.includes(spirit.complexity) &&
-          !excludedSpiritIdsByPlayer[index]?.has(spirit.id),
+          !excludedSpiritIdsByPlayer[index]?.has(spirit.id) &&
+          (spiritWeightsByPlayer[index]?.[spirit.id] ?? 1) > 0,
       ),
+      (spirit) => spiritWeightsByPlayer[index]?.[spirit.id] ?? 1,
       random,
     ),
   )
@@ -154,17 +157,50 @@ export function rerollSpirit(
   playerComplexities: readonly SpiritComplexity[],
   excludedSpiritIds: ReadonlySet<string>,
   random: () => number = Math.random,
+  spiritWeights: Readonly<Record<string, number>> = {},
 ): Spirit | null {
-  const candidates = shuffle(
+  const candidates = weightedShuffle(
     spirits.filter(
       (spirit) =>
         playerComplexities.includes(spirit.complexity) &&
-        !excludedSpiritIds.has(spirit.id),
+        !excludedSpiritIds.has(spirit.id) &&
+        (spiritWeights[spirit.id] ?? 1) > 0,
     ),
+    (spirit) => spiritWeights[spirit.id] ?? 1,
     random,
   )
 
   return candidates[0] ?? null
+}
+
+function weightedShuffle<T>(
+  items: readonly T[],
+  getWeight: (item: T) => number,
+  random: () => number,
+): T[] {
+  const remaining = [...items]
+  const shuffled: T[] = []
+
+  while (remaining.length > 0) {
+    const totalWeight = remaining.reduce(
+      (total, item) => total + getWeight(item),
+      0,
+    )
+    let selection = random() * totalWeight
+    let selectedIndex = remaining.length - 1
+
+    for (let index = 0; index < remaining.length; index += 1) {
+      selection -= getWeight(remaining[index]!)
+      if (selection < 0) {
+        selectedIndex = index
+        break
+      }
+    }
+
+    shuffled.push(remaining.splice(selectedIndex, 1)[0]!)
+  }
+
+  return shuffled
 }
 
 function shuffle<T>(items: readonly T[], random: () => number): T[] {

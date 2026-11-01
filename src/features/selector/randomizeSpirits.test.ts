@@ -143,6 +143,64 @@ describe('randomizeSpirits', () => {
     ).toBeNull()
   })
 
+  it('uses relative spirit weights for random picks and excludes zero-weight spirits', () => {
+    const candidates = spirits
+      .filter((spirit) => spirit.complexity === 'Low')
+      .slice(0, 2)
+    const lessLikely = candidates[0]!
+    const moreLikely = candidates[1]!
+
+    expect(
+      randomizeSpiritsWithFixedChoices(
+        candidates,
+        [['Low']],
+        [null],
+        () => 0.1,
+        [],
+        [{}],
+      ),
+    ).toEqual([lessLikely])
+
+    expect(
+      randomizeSpiritsWithFixedChoices(
+        candidates,
+        [['Low']],
+        [null],
+        () => 0.3,
+        [],
+        [{ [lessLikely.id]: 1, [moreLikely.id]: 4 }],
+      ),
+    ).toEqual([moreLikely])
+
+    expect(
+      randomizeSpiritsWithFixedChoices(
+        candidates,
+        [['Low']],
+        [null],
+        () => 0,
+        [],
+        [{ [lessLikely.id]: 0, [moreLikely.id]: 1 }],
+      ),
+    ).toEqual([moreLikely])
+  })
+
+  it('still allows a manual choice whose random weight is zero', () => {
+    const manuallyChosen = spirits.find(
+      (spirit) => spirit.complexity === 'Low',
+    )!
+
+    expect(
+      randomizeSpiritsWithFixedChoices(
+        [manuallyChosen],
+        [['Low']],
+        [manuallyChosen],
+        () => 0,
+        [],
+        [{ [manuallyChosen.id]: 0 }],
+      ),
+    ).toEqual([manuallyChosen])
+  })
+
   it('rejects duplicate manually selected spirits', () => {
     const fixedSpirit = spirits[0]!
 
@@ -194,5 +252,23 @@ describe('randomizeSpirits', () => {
     const alreadySelected = new Set(lowSpirits.map((spirit) => spirit.id))
 
     expect(rerollSpirit(spirits, ['Low'], alreadySelected, () => 0)).toBeNull()
+  })
+
+  it('honors profile weights when rerolling', () => {
+    const candidates = spirits
+      .filter((spirit) => spirit.complexity === 'Low')
+      .slice(0, 2)
+    const neverSpirit = candidates[0]!
+    const allowedSpirit = candidates[1]!
+
+    expect(
+      rerollSpirit(
+        candidates,
+        ['Low'],
+        new Set(),
+        () => 0,
+        { [neverSpirit.id]: 0 },
+      ),
+    ).toBe(allowedSpirit)
   })
 })

@@ -57,6 +57,37 @@ describe('profile history data', () => {
     ).toBeNull()
   })
 
+  it('accepts spirit weights and rejects invalid weights', () => {
+    const profile = {
+      id: 'profile-1',
+      name: 'Alex',
+      spiritWeights: {
+        'spirit-never': 0,
+        'spirit-frequent': 4,
+      },
+    }
+
+    expect(
+      readProfileHistory(
+        JSON.stringify({ version: 1, profiles: [profile], games: [] }),
+      )?.profiles,
+    ).toEqual([profile])
+    expect(
+      readProfileHistory(
+        JSON.stringify({
+          version: 1,
+          profiles: [
+            {
+              ...profile,
+              spiritWeights: { 'spirit-invalid': 3 },
+            },
+          ],
+          games: [],
+        }),
+      ),
+    ).toBeNull()
+  })
+
   it('gets spirits from the most recent games played by a profile', () => {
     const games: SavedGame[] = [
       {
