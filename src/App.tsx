@@ -508,7 +508,10 @@ function App() {
                             Player {playerNumber}
                           </p>
                           <div className="flex shrink-0 items-center gap-2">
-                            {showMatchupTiers && matchupTier && (
+                            {matchupTier &&
+                              (showMatchupTiers ||
+                                matchupTier.startsWith('D') ||
+                                matchupTier.startsWith('F')) && (
                               <span
                                 className={`inline-flex justify-center rounded-md border px-2 py-1 text-xs font-semibold ${matchupTierColors[matchupTier.charAt(0)]}`}
                                 aria-label={`Matchup tier ${matchupTier}`}
