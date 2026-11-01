@@ -16,6 +16,7 @@ import GeneralTierList from './features/tierList/GeneralTierList'
 import { tierListItems } from './features/tierList/tierListData'
 import {
   emptyProfileHistory,
+  getRecentlyPlayedSpiritIds,
   readProfileHistory,
   type ProfileHistoryData,
   type SavedGame,
@@ -38,6 +39,7 @@ const sortedSpirits = [...spirits].sort((first, second) =>
   first.name.localeCompare(second.name),
 )
 const profileHistoryStorageKey = 'spirit-island-helper-profile-history-v1'
+const recentGamesToExclude = 3
 
 function App() {
   const [activeView, setActiveView] = useState<
@@ -409,6 +411,17 @@ function App() {
       spirits,
       selectedAdversary?.id ?? null,
     )
+    const recentlyPlayedSpiritIds = playerProfileChoices
+      .slice(0, playerCount)
+      .map((profileId) =>
+        profileId
+          ? getRecentlyPlayedSpiritIds(
+              profileHistoryState.data.games,
+              profileId,
+              recentGamesToExclude,
+            )
+          : new Set<string>(),
+      )
     const selection = randomizeSpiritsWithFixedChoices(
       eligibleSpirits,
       applyGlobalComplexityFilter(
@@ -416,14 +429,16 @@ function App() {
         availableComplexities,
       ),
       fixedSpiritChoices,
+      Math.random,
+      recentlyPlayedSpiritIds,
     )
 
     if (!selection) {
       setResults(null)
       setError(
         selectedAdversary
-          ? 'These complexity choices cannot give every player a different spirit without an F-tier matchup against the selected adversary. Enable more complexity levels or allow more levels for each player.'
-          : 'These complexity choices cannot give every player a different spirit. Enable more complexity levels or allow more levels for each player.',
+          ? 'These choices cannot give every player a different spirit while avoiding F-tier matchups and recently played spirits. Enable more complexity levels, allow more levels for each player, or change manual spirit choices.'
+          : 'These choices cannot give every player a different spirit while avoiding recently played spirits. Enable more complexity levels, allow more levels for each player, or change manual spirit choices.',
       )
       return
     }
@@ -463,17 +478,33 @@ function App() {
         [playerComplexities[playerIndex] ?? []],
         availableComplexities,
       )[0] ?? []
+    const profileId = playerProfileChoices[playerIndex]
+    const recentlyPlayedSpiritIds = profileId
+      ? getRecentlyPlayedSpiritIds(
+          profileHistoryState.data.games,
+          profileId,
+          recentGamesToExclude,
+        )
+      : new Set<string>()
+    const excludedSpiritIds = new Set([
+      ...results.map((result) => result.spirit.id),
+      ...recentlyPlayedSpiritIds,
+    ])
     const replacement = rerollSpirit(
       excludeFMatchups(spirits, selectedAdversary?.id ?? null),
       availableForPlayer,
-      new Set(results.map((result) => result.spirit.id)),
+      excludedSpiritIds,
     )
 
     if (!replacement) {
       setError(
-        selectedAdversary
-          ? `No different eligible spirit without an F-tier matchup is available for Player ${playerNumber} without changing anyone else's spirit. Adjust the complexity choices or pick spirits again for everyone.`
-          : `No different eligible spirit is available for Player ${playerNumber} without changing anyone else's spirit. Adjust the complexity choices or pick spirits again for everyone.`,
+        profileId
+          ? selectedAdversary
+            ? `No different eligible spirit outside this profile’s last 3 games and without an F-tier matchup is available for Player ${playerNumber} without changing anyone else's spirit. Adjust the complexity choices or pick spirits again for everyone.`
+            : `No different spirit outside this profile’s last 3 games is available for Player ${playerNumber} without changing anyone else's spirit. Adjust the complexity choices or pick spirits again for everyone.`
+          : selectedAdversary
+            ? `No different eligible spirit without an F-tier matchup is available for Player ${playerNumber} without changing anyone else's spirit. Adjust the complexity choices or pick spirits again for everyone.`
+            : `No different eligible spirit is available for Player ${playerNumber} without changing anyone else's spirit. Adjust the complexity choices or pick spirits again for everyone.`,
       )
       return
     }
@@ -745,6 +776,10 @@ function App() {
               )
             })}
           </div>
+          <p className="mt-3 text-xs text-[#95a294]">
+            Random picks and rerolls avoid spirits each selected profile played
+            in its last 3 saved games. Manual spirit choices are unaffected.
+          </p>
 
           <button
             type="button"
@@ -795,6 +830,12 @@ function App() {
               <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {results.map(
                   ({ playerNumber, spirit, selectedAspectId }) => {
+                    const playerLabel =
+                      profileHistoryState.data.profiles.find(
+                        (profile) =>
+                          profile.id ===
+                          playerProfileChoices[playerNumber - 1],
+                      )?.name ?? `Player ${playerNumber}`
                     const selectedAspect = spirit.aspects.find(
                       (aspect) => aspect.id === selectedAspectId,
                     )
@@ -812,8 +853,8 @@ function App() {
                         className="rounded-xl border border-emerald-100/10 bg-[#17211b]/90 p-5"
                       >
                         <div className="flex items-center justify-between gap-3">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300/80">
-                            Player {playerNumber}
+                          <p className="text-sm font-semibold text-emerald-300/80">
+                            {playerLabel}
                           </p>
                           <div className="flex shrink-0 items-center gap-2">
                             {matchupTier &&
@@ -831,7 +872,7 @@ function App() {
                               <button
                                 type="button"
                                 onClick={() => rerollPlayer(playerNumber)}
-                                aria-label={`Reroll spirit for Player ${playerNumber}`}
+                                aria-label={`Reroll spirit for ${playerLabel}`}
                                 className="min-h-9 rounded-lg border border-emerald-200/20 px-3 text-sm font-semibold text-emerald-200 transition hover:border-emerald-200/40 hover:bg-emerald-200/10 focus-visible:outline-emerald-300"
                               >
                                 Reroll

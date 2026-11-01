@@ -43,6 +43,7 @@ export function randomizeSpiritsWithFixedChoices(
   playerComplexities: readonly (readonly SpiritComplexity[])[],
   fixedSpirits: readonly (Spirit | null)[],
   random: () => number = Math.random,
+  excludedSpiritIdsByPlayer: readonly ReadonlySet<string>[] = [],
 ): readonly Spirit[] | null {
   const assignments: (Spirit | undefined)[] = Array.from({
     length: playerComplexities.length,
@@ -66,9 +67,13 @@ export function randomizeSpiritsWithFixedChoices(
     usedSpiritIds.add(fixedSpirit.id)
   }
 
-  const candidates = playerComplexities.map((complexities) =>
+  const candidates = playerComplexities.map((complexities, index) =>
     shuffle(
-      spirits.filter((spirit) => complexities.includes(spirit.complexity)),
+      spirits.filter(
+        (spirit) =>
+          complexities.includes(spirit.complexity) &&
+          !excludedSpiritIdsByPlayer[index]?.has(spirit.id),
+      ),
       random,
     ),
   )

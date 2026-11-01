@@ -30,6 +30,29 @@ export const emptyProfileHistory: ProfileHistoryData = {
   games: [],
 }
 
+export function getRecentlyPlayedSpiritIds(
+  games: readonly SavedGame[],
+  profileId: string,
+  gameLimit: number,
+): ReadonlySet<string> {
+  const recentGames = [...games]
+    .filter((game) =>
+      game.players.some((player) => player.profileId === profileId),
+    )
+    .sort((first, second) =>
+      second.playedAt.localeCompare(first.playedAt),
+    )
+    .slice(0, gameLimit)
+
+  return new Set(
+    recentGames.flatMap((game) =>
+      game.players
+        .filter((player) => player.profileId === profileId)
+        .map((player) => player.spiritId),
+    ),
+  )
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }

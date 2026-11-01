@@ -106,6 +106,43 @@ describe('randomizeSpirits', () => {
     expect(results?.[1]?.id).not.toBe(fixedSpirit.id)
   })
 
+  it('excludes recent spirits only from the matching player random pick', () => {
+    const highSpirits = spirits.filter(
+      (spirit) => spirit.complexity === 'Very High',
+    )
+    const recentlyPlayed = highSpirits[0]!
+    const fixedSpirit = highSpirits[1]!
+    const results = randomizeSpiritsWithFixedChoices(
+      highSpirits,
+      [['Very High'], ['Very High']],
+      [null, fixedSpirit],
+      () => 0,
+      [
+        new Set([recentlyPlayed.id]),
+        new Set([fixedSpirit.id]),
+      ],
+    )
+
+    expect(results?.[0]?.id).not.toBe(recentlyPlayed.id)
+    expect(results?.[1]).toBe(fixedSpirit)
+  })
+
+  it('returns null when recent spirit exclusions leave no eligible random spirit', () => {
+    const onlySpirit = spirits.filter(
+      (spirit) => spirit.id === 'fractured-days-split-the-sky',
+    )
+
+    expect(
+      randomizeSpiritsWithFixedChoices(
+        onlySpirit,
+        [['Very High']],
+        [null],
+        () => 0,
+        [new Set(onlySpirit.map((spirit) => spirit.id))],
+      ),
+    ).toBeNull()
+  })
+
   it('rejects duplicate manually selected spirits', () => {
     const fixedSpirit = spirits[0]!
 
