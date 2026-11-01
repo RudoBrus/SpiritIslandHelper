@@ -136,13 +136,13 @@ function GeneralTierList() {
 
   return (
     <section
-      aria-labelledby="general-tier-list-title"
+      aria-labelledby="spirit-tier-list-title"
       className="rounded-2xl border border-white/10 bg-[#17211b]/90 p-5 shadow-2xl shadow-black/10 sm:p-7"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 id="general-tier-list-title" className="text-xl font-semibold">
-            General spirit tier list
+          <h2 id="spirit-tier-list-title" className="text-xl font-semibold">
+            Spirit tier list
           </h2>
         </div>
         <button
@@ -165,12 +165,6 @@ function GeneralTierList() {
           {storageMessage}
         </p>
       )}
-      {selectedItemId && (
-        <p className="mt-4 text-sm text-emerald-100" aria-live="polite">
-          Tile selected. Tap a tier to move it.
-        </p>
-      )}
-
       <div className="mt-5 space-y-2">
         {tierNames.map((tier) => {
           const items = itemsByTier[tier].flatMap((itemId) => {

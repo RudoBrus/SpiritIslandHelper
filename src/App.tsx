@@ -290,7 +290,7 @@ function App() {
             type="button"
             aria-pressed={activeView === 'general-tier-list'}
             onClick={() => setActiveView('general-tier-list')}
-            aria-label="General spirit tier list"
+            aria-label="Spirit tier list"
             className={`min-h-11 min-w-0 rounded-lg px-1 text-xs font-semibold transition focus-visible:outline-emerald-300 sm:px-4 sm:text-sm ${
               activeView === 'general-tier-list'
                 ? 'bg-emerald-300 text-[#102016]'
@@ -298,7 +298,7 @@ function App() {
             }`}
           >
             <span className="sm:hidden">Tiers</span>
-            <span className="hidden sm:inline">General tiers</span>
+            <span className="hidden sm:inline">Tier list</span>
           </button>
         </div>
 
